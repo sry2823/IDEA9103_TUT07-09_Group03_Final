@@ -10,7 +10,7 @@ Our project *Firefly Catcher* is inspired by both interactive games and visual s
 
 One key inspiration is the game *Journey*, where players interact with the environment through simple actions like movement and sound. We were particularly interested in how the experience focuses on emotion, rhythm, and atmosphere rather than complex controls.
 
-We also drew visual inspiration from the film *Grave of the Fireflies*, especially the glowing fireflies in the night. This influenced our use of contrasting colors: cool blue and purple fireflies on the left side, and warm red and orange fireflies on the right.
+We also drew visual inspiration from the film *Grave of the Fireflies*, especially the glowing fireflies in the night. This influenced our use of contrasting colors:warm color fireflies on the rig and cool color fireflies on the left side.
 
 These references helped shape our idea of creating a calm but slightly tense interactive experience that combines sound, movement, and time.
 
@@ -26,8 +26,7 @@ We use **Perlin noise** to to control the movement of fireflies.....
 We also use **randomness** to to generate gameplay elements.....
 
 
-A **time-based system** is used to control the overall flow of the game......
-
+A **time-based system** is used to control the overall flow of the game,add golden fireflies and let warm or cold screen become dark for a while.
 
 
 In addition, we use **audio input** through the microphone to to detect pitch......
@@ -43,7 +42,7 @@ Each team member was responsible for one core mechanic:
    Uses microphone input to detect pitch.Low sounds calm cool-coloured fireflies on the left, while high-pitched sounds affect warm-coloured fireflies on the right. This creates a connection between the player’s voice and the environment.
 
 **Time-based Mechanic – Xinyang Yu**  
-  Controls the game flow through a countdown system. Each round generates a random task, and difficulty increases over time. Special golden fireflies can extend time or provide bonuses.
+  Controls the game flow through a countdown system. Each round will randomly disappear some fireflies as time goes by. Special golden fireflies will appear every 10s each round and if user catch it,can get extra 5s.Every 30s half part of screen(cold or warm part) will become dark and cannot be captured for 5s.
 
 **Perlin Noise & Randomness – Ruiyang Sun**  
  Uses Perlin noise for smooth firefly movement and randomness for behaviour variation, mission generation, and special events. This makes the environment feel dynamic and natural.
