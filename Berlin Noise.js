@@ -163,15 +163,13 @@ function updateAndDrawGameFireflies() {
   blendMode(ADD);
 
   for (let f of gameFireflies) {
-  if (f.visible === false) {
-    continue;
-  }
+    if (f.visible === false) {
+      continue;
+    }
 
-  if (!isFireflyFrozen(f)) {
-    moveFireflyWithNoise(f);
-  }
-
-  if (f.side === "left") {
+    if (!isFireflyFrozen(f)) {
+      moveFireflyWithNoise(f);
+    }
 
     if (f.side === "left") {
       // Warm fireflies on the left side
