@@ -50,13 +50,13 @@ function startGameScene() {
 function drawGameScene() {
   background(0);
 
-  // Draw background image
   image(bg, 0, 0, width, height);
 
-  // Draw top target information
+  updateAudioSystem();
+  timeSystem();
+
   drawGameTopInfo();
 
-  // Move and draw all fireflies
   updateAndDrawGameFireflies();
 }
 
@@ -112,7 +112,9 @@ function createSideFireflies(side, count) {
 
     gameFireflies.push({
       side: side,
-
+      type: side == "left" ? "warm" : "cool",
+      visible: true,
+      caught: false,
       x: x,
       y: y,
 
@@ -161,8 +163,13 @@ function updateAndDrawGameFireflies() {
   blendMode(ADD);
 
   for (let f of gameFireflies) {
-    // Move firefly with Perlin noise and separation force
-    moveFireflyWithNoise(f);
+    if (f.visible === false) {
+      continue;
+    }
+
+    if (!isFireflyFrozen(f)) {
+      moveFireflyWithNoise(f);
+    }
 
     if (f.side === "left") {
       // Warm fireflies on the left side
@@ -204,9 +211,11 @@ function moveFireflyWithNoise(f) {
   let nx = noise(f.noiseSeedX, time);
   let ny = noise(f.noiseSeedY, time);
 
-  // Convert noise values into smooth velocity
-  let targetVX = map(nx, 0, 1, -1, 1) * f.flightSpeed;
-  let targetVY = map(ny, 0, 1, -1, 1) * f.flightSpeed;
+let audioSpeedScale = getFireflySpeedScale(f);
+
+// Convert noise values into smooth velocity
+let targetVX = map(nx, 0, 1, -1, 1) * f.flightSpeed * audioSpeedScale;
+let targetVY = map(ny, 0, 1, -1, 1) * f.flightSpeed * audioSpeedScale;
 
   // Smoothly change direction instead of turning suddenly
   f.vx = lerp(f.vx, targetVX, 0.035);
@@ -259,7 +268,7 @@ function moveFireflyWithNoise(f) {
 
   // Limit maximum speed to avoid sudden fast movement
   let currentSpeed = sqrt(f.vx * f.vx + f.vy * f.vy);
-  let maxSpeed = f.flightSpeed * 1.8;
+  let maxSpeed = f.flightSpeed * audioSpeedScale * 1.8;
 
   if (currentSpeed > maxSpeed) {
     f.vx = (f.vx / currentSpeed) * maxSpeed;
@@ -382,8 +391,10 @@ function drawGameTopInfo() {
 
 // Mouse click event
 function mousePressed() {
-  // Start game when clicking the Game Start button
   if (!gameStarted && isMouseOnStartButton()) {
+    userStartAudio();
+    startAudioSystem();
+    startTimeSystem();
     startGameScene();
   }
 }
