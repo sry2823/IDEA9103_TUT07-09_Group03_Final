@@ -1,7 +1,7 @@
 // Background image
 let bg;
 
-// Array to store all fireflies
+// Firefly array for the start screen
 let fireflies = [];
 
 // Button position and size
@@ -10,68 +10,89 @@ let buttonY;
 let buttonW = 220;
 let buttonH = 60;
 
-// Canvas size
-let canvasW = 960;
-let canvasH = 640;
-
-// Load assets before the program starts
+// Preload image assets
 function preload() {
   // Load the background image
   bg = loadImage("background.png");
 }
 
 function setup() {
-  // Create the canvas
-  createCanvas(canvasW, canvasH);
+  // Create a canvas that fills the entire browser window
+  createCanvas(windowWidth, windowHeight);
 
-  // Set text alignment to the center
+  // Align text to the center
   textAlign(CENTER, CENTER);
 
   // Remove outlines from shapes
   noStroke();
 
-  // Place the button in the center of the canvas
+  // Place the button in the center of the screen
   buttonX = width / 2;
   buttonY = height / 2;
 
-  // Generate fireflies
+  // Generate fireflies for the start screen
   createFireflies();
 }
 
 function draw() {
-  // Clear the canvas with a black background
   background(0);
 
-  // Draw the full background image to fit the canvas
+  // If the game has started, draw the game scene
+  if (gameStarted) {
+    drawGameScene();
+    return;
+  }
+
+  // Draw the start screen background image and make it fill the screen
   image(bg, 0, 0, width, height);
 
-  // Draw all breathing fireflies
+  // Draw fireflies on the start screen
   drawFireflies();
 
-  // Draw the Game Start button
+  // Draw the start button
   drawStartButton();
+}
+
+// Automatically resize the canvas when the browser window changes size
+function windowResized() {
+  // Resize the canvas to match the current browser window
+  resizeCanvas(windowWidth, windowHeight);
+
+  // Reposition the button to the center of the screen
+  buttonX = width / 2;
+  buttonY = height / 2;
+
+  // If still on the start screen, regenerate fireflies to fit the new screen size
+  if (!gameStarted) {
+    createFireflies();
+  }
+
+  // If already in the game scene, restart the game scene to update the boundaries
+  if (gameStarted) {
+    startGameScene();
+  }
 }
 
 // Randomly but evenly generate 50 fireflies
 function createFireflies() {
   fireflies = [];
 
-  // Divide the canvas into a 10 x 5 grid
+  // Divide the screen into a 10 x 5 grid
   let cols = 10;
   let rows = 5;
 
-  // Set margins to keep fireflies away from the canvas edges
-  let marginX = 45;
-  let marginY = 45;
+  // Set margins to keep fireflies away from the screen edges
+  let marginX = width * 0.05;
+  let marginY = height * 0.08;
 
-  // Calculate the size of each grid cell
+  // Calculate the width and height of each grid cell
   let cellW = (width - marginX * 2) / cols;
   let cellH = (height - marginY * 2) / rows;
 
   // Generate one firefly inside each grid cell
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      // Random position inside the current grid cell
+      // Randomly generate a position inside the current grid cell
       let x = marginX + col * cellW + random(cellW);
       let y = marginY + row * cellH + random(cellH);
 
@@ -79,18 +100,18 @@ function createFireflies() {
       fireflies.push({
         x: x,
         y: y,
-        coreSize: random(5, 8),       // Size of the center light
-        maxGlow: random(35, 60),      // Maximum glow radius
-        speed: random(0.003, 0.008),  // Breathing animation speed
-        offset: random(1)             // Random animation delay
+        coreSize: random(5, 8),
+        maxGlow: random(35, 60),
+        speed: random(0.003, 0.008),
+        offset: random(1)
       });
     }
   }
 }
 
-// Draw all fireflies
+// Draw all fireflies on the start screen
 function drawFireflies() {
-  // Use additive blending to make glowing effects brighter
+  // Use additive blending to make the glow effect brighter
   blendMode(ADD);
 
   for (let f of fireflies) {
@@ -99,7 +120,6 @@ function drawFireflies() {
     let isWarm = f.x < width / 2;
 
     if (isWarm) {
-      // Draw warm fireflies
       drawBreathingFirefly(
         f.x,
         f.y,
@@ -107,12 +127,11 @@ function drawFireflies() {
         f.maxGlow,
         f.speed,
         f.offset,
-        color(255, 145, 30),   // Outer warm color
-        color(255, 210, 80),   // Middle warm color
-        color(255, 245, 180)   // Inner warm color
+        color(255, 145, 30),
+        color(255, 210, 80),
+        color(255, 245, 180)
       );
     } else {
-      // Draw cool fireflies
       drawBreathingFirefly(
         f.x,
         f.y,
@@ -120,9 +139,9 @@ function drawFireflies() {
         f.maxGlow,
         f.speed,
         f.offset,
-        color(40, 150, 255),   // Outer cool color
-        color(120, 210, 255),  // Middle cool color
-        color(220, 250, 255)   // Inner cool color
+        color(40, 150, 255),
+        color(120, 210, 255),
+        color(220, 250, 255)
       );
     }
   }
@@ -131,7 +150,7 @@ function drawFireflies() {
   blendMode(BLEND);
 }
 
-// Draw a single breathing firefly with an outward spreading glow
+// Draw a single breathing firefly
 function drawBreathingFirefly(
   x,
   y,
@@ -143,41 +162,41 @@ function drawBreathingFirefly(
   middleColor,
   innerColor
 ) {
-  // Animation progress from 0 to 1
+  // Animation progress, ranging from 0 to 1
   let t = (frameCount * speed + offset) % 1;
 
-  // Breathing intensity: fades in, expands, then fades out
+  // Breathing intensity
   let breath = sin(t * PI);
 
-  // Overall brightness of the firefly
+  // Overall transparency
   let alpha = map(breath, 0, 1, 40, 220);
 
-  // First expanding ring
+  // Size of the first outward-spreading glow ring
   let ringSize1 = map(t, 0, 1, coreSize, maxGlow);
   let ringAlpha1 = map(t, 0, 1, 180, 0);
 
-  // Second delayed expanding ring
+  // Second delayed outward-spreading glow ring
   let ringProgress2 = (t + 0.35) % 1;
   let ringSize2 = map(ringProgress2, 0, 1, coreSize, maxGlow * 1.2);
   let ringAlpha2 = map(ringProgress2, 0, 1, 130, 0);
 
-  // Soft outer glow
+  // Draw the soft outer glow
   fill(red(outerColor), green(outerColor), blue(outerColor), alpha * 0.18);
   circle(x, y, maxGlow * breath * 1.5);
 
-  // First outward spreading glow ring
+  // Draw the first spreading glow ring
   fill(red(middleColor), green(middleColor), blue(middleColor), ringAlpha1 * 0.5);
   circle(x, y, ringSize1);
 
-  // Second delayed outward spreading glow ring
+  // Draw the second spreading glow ring
   fill(red(outerColor), green(outerColor), blue(outerColor), ringAlpha2 * 0.35);
   circle(x, y, ringSize2);
 
-  // Breathing center light
+  // Draw the breathing center light
   fill(red(innerColor), green(innerColor), blue(innerColor), alpha);
   circle(x, y, coreSize + breath * 5);
 
-  // Bright white highlight in the center
+  // Draw the white highlight in the center
   fill(255, alpha);
   circle(x, y, coreSize * 0.45);
 }
@@ -191,7 +210,6 @@ function drawStartButton() {
     mouseY > buttonY - buttonH / 2 &&
     mouseY < buttonY + buttonH / 2;
 
-  // Draw the button from its center
   rectMode(CENTER);
 
   // Change button color when the mouse hovers over it
@@ -203,10 +221,10 @@ function drawStartButton() {
     cursor(ARROW);
   }
 
-  // Draw rounded rectangle button
+  // Draw the rounded rectangle button
   rect(buttonX, buttonY, buttonW, buttonH, 18);
 
-  // Draw button text
+  // Draw the button text
   fill(255);
   textSize(28);
   textStyle(BOLD);
