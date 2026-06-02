@@ -8,40 +8,76 @@ let baseSpeed = 10;
 let musicSpeed = 10;
 let lastMusicReadTime = 0;
 
+let musicPartDuration = 25;
+let musicPartStartTime = 0;
+let currentSongIndex = -1;
+
 let oohSlowAmount = 0;
 let eeeSlowAmount = 0;
 let soundSlowStep = 0.04;
 let maxSoundSlow = 6;
 
-function preload() {
+let audioStarted = false;
+
+function preloadAudioFiles() {
   bgSongs[0] = loadSound("assets/assets-midnight-forest.mp3");
   bgSongs[1] = loadSound("assets/assets-magic-forest.mp3");
   bgSongs[2] = loadSound("assets/assets-mysterious-forest-lofi.mp3");
 }
 
-function mousePressed() {
-  if (gameStarted == false) {
-    userStartAudio();
-    setupAudioLayers();
-    gameStarted = true;
-  }
-}
 
-function setupAudioLayers() {
-  bgSong = random(bgSongs);
-  bgSong.loop();
-
-  bgFft = new p5.FFT(0.8, 128);
-  bgSong.connect(bgFft);
+function startAudioSystem() {
+  audioStarted = true;
 
   mic = new p5.AudioIn();
   mic.start();
 
   micFft = new p5.FFT(0.8, 128);
   mic.connect(micFft);
+
+  startNextMusicPart();
 }
 
-function updateAudioLayers() {
+function startNextMusicPart() {
+  if (bgSong) {
+    bgSong.stop();
+  }
+
+  let nextSongIndex = floor(random(bgSongs.length));
+
+  if (nextSongIndex == currentSongIndex) {
+    nextSongIndex = (nextSongIndex + 1) % bgSongs.length;
+  }
+
+  currentSongIndex = nextSongIndex;
+  bgSong = bgSongs[currentSongIndex];
+
+  let maxStartTime = bgSong.duration() - musicPartDuration;
+
+  if (maxStartTime < 0) {
+    maxStartTime = 0;
+  }
+
+  let randomStartTime = random(maxStartTime);
+
+  bgSong.play(0, 1, 1, randomStartTime, musicPartDuration);
+
+  bgFft = new p5.FFT(0.8, 128);
+  bgSong.connect(bgFft);
+
+  musicPartStartTime = millis();
+  lastMusicReadTime = millis();
+}
+
+function updateAudioSystem() {
+  if (!audioStarted) {
+    return;
+  }
+
+  if (millis() - musicPartStartTime > musicPartDuration * 1000) {
+    startNextMusicPart();
+  }
+
   updateMusicSpeed();
   updateVoiceSlow();
 }
@@ -53,8 +89,8 @@ function updateMusicSpeed() {
     let centroid = bgFft.getCentroid();
     let soundY = map(centroid, 20, 8000, 0, 20);
 
-    musicSpeed = baseSpeed + (soundY - 10);
-    musicSpeed = constrain(musicSpeed, 0, 20);
+    musicSpeed = constrain(soundY, 0, 20);
+
 
     lastMusicReadTime = millis();
   }
@@ -90,5 +126,9 @@ function getFireflySpeed(firefly) {
     speed = speed - oohSlowAmount;
   }
 
-  return max(speed, 1);
+  return constrain(speed, 1, 20);
+}
+
+function getFireflySpeedScale(firefly) {
+  return getFireflySpeed(firefly) / baseSpeed;
 }
