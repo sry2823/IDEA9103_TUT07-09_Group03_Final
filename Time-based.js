@@ -11,13 +11,17 @@ let darkSide = null;
 let darkStartTime = 0;
 let darkDuration = 5000;
 
-let disappearedFireflies = []
+let disappearedFireflies = [];
 
 function startTimeSystem() {
   startTime = millis();
   lastDisappearTime = millis();
   lastGoldenTime = millis();
   lastDarkTime = millis();
+
+  goldenFirefly = null;
+  darkSide = null;
+  disappearedFireflies = [];
 }
 
 function timeSystem() {
@@ -28,8 +32,8 @@ function timeSystem() {
     gameState = "lose";
   }
 
-  if (currentTime - lastDisappearTime > 8000) {
-    randomlyDisappearFireflies();
+  if (currentTime - lastDisappearTime > 15000) {
+    randomlyDisappearOneFirefly();
     lastDisappearTime = currentTime;
   }
 
@@ -47,30 +51,81 @@ function timeSystem() {
     darkSide = null;
   }
 
+  drawGoldenFirefly();
+  drawDisappearEffects();
   drawTimeUI(timeLeft);
   drawDarkSide();
 }
 
-function randomlyDisappearFireflies() {
-  let disappearNum = floor(random(1, 4));
+function randomlyDisappearOneFirefly() {
+  let visibleFireflies = [];
 
-  for (let i = 0; i < disappearNum; i++) {
-    let randomFirefly = random(gameFireflies);
-
-    if (
-      randomFirefly &&
-      !randomFirefly.caught &&
-      randomFirefly.type !== "gold" &&
-      randomFirefly.visible !== false
-    ) {
-      randomFirefly.visible = false;
+  for (let f of gameFireflies) {
+    if (f.visible !== false && f.caught !== true && f.type !== "gold") {
+      visibleFireflies.push(f);
     }
+  }
+
+  if (visibleFireflies.length > 0) {
+    let randomFirefly = random(visibleFireflies);
+
+    randomFirefly.visible = false;
+
+    disappearedFireflies.push({
+      x: randomFirefly.x,
+      y: randomFirefly.y,
+      startTime: millis(),
+      side: randomFirefly.side
+    });
   }
 }
 
 function createGoldenFirefly() {
   if (goldenFirefly === null) {
-    goldenFirefly = new Firefly("gold");
+    let side = random(["left", "right"]);
+    let minX;
+    let maxX;
+
+    if (side === "left") {
+      minX = 35;
+      maxX = width / 2 - 35;
+    } else {
+      minX = width / 2 + 35;
+      maxX = width - 35;
+    }
+
+     goldenFirefly = {
+      side: side,
+      type: "gold",
+      visible: true,
+      caught: false,
+      x: random(minX, maxX),
+      y: random(topUIHeight + 35, height - 35),
+      coreSize: 8,
+      maxGlow: 75,
+      breatheSpeed: 0.006,
+      breatheOffset: random(1)
+    };
+  }
+}
+
+function drawGoldenFirefly() {
+  if (goldenFirefly !== null && goldenFirefly.visible !== false) {
+    blendMode(ADD);
+
+    drawGameBreathingFirefly(
+      goldenFirefly.x,
+      goldenFirefly.y,
+      goldenFirefly.coreSize,
+      goldenFirefly.maxGlow,
+      goldenFirefly.breatheSpeed,
+      goldenFirefly.breatheOffset,
+      color(255, 180, 20),
+      color(255, 230, 80),
+      color(255, 255, 210)
+    );
+
+    blendMode(BLEND);
   }
 }
 
@@ -91,12 +146,20 @@ function activateDarkSide() {
   darkStartTime = millis();
 }
 
-function canCatchFirefly(firefly) {
+function isFireflyFrozen(firefly) {
   if (darkSide === "cool" && firefly.type === "cool") {
-    return false;
+    return true;
   }
 
   if (darkSide === "warm" && firefly.type === "warm") {
+    return true;
+  }
+
+  return false;
+}
+
+function canCatchFirefly(firefly) {
+  if (isFireflyFrozen(firefly)) {
     return false;
   }
 
@@ -105,17 +168,66 @@ function canCatchFirefly(firefly) {
 
 function drawDarkSide() {
   if (darkSide === "cool") {
-    noStroke();
-    fill(0, 180);
-    rect(width / 2, 0, width / 2, height);
+     drawIceBlock(width / 2, 0, width / 2, height);
   }
 
   if (darkSide === "warm") {
-    noStroke();
-    fill(0, 180);
-    rect(0, 0, width / 2, height);
+   drawIceBlock(0, 0, width / 2, height);
   }
 }
+
+function drawIceBlock(x, y, w, h) {
+  noStroke();
+
+  fill(150, 220, 255, 85);
+  rect(x, y, w, h);
+
+  fill(230, 250, 255, 45);
+  rect(x + 15, y + 15, w - 30, h - 30);
+
+  stroke(230, 250, 255, 110);
+  strokeWeight(2);
+
+  for (let i = 0; i < 12; i++) {
+    let lineX = x + random(w);
+    line(lineX, y, lineX + random(-80, 80), y + h);
+  }
+
+  for (let i = 0; i < 8; i++) {
+    let lineY = y + random(h);
+    line(x, lineY, x + w, lineY + random(-50, 50));
+  }
+
+  noStroke();
+}
+
+function drawDisappearEffects() {
+  for (let i = disappearedFireflies.length - 1; i >= 0; i--) {
+    let effect = disappearedFireflies[i];
+    let age = millis() - effect.startTime;
+
+    if (age > 900) {
+      disappearedFireflies.splice(i, 1);
+    } else {
+      let size = map(age, 0, 900, 10, 90);
+      let alpha = map(age, 0, 900, 220, 0);
+
+      noStroke();
+
+      if (effect.side === "left") {
+        fill(255, 160, 30, alpha);
+      } else {
+        fill(80, 190, 255, alpha);
+      }
+
+      circle(effect.x, effect.y, size);
+
+      fill(255, 255, 210, alpha);
+      circle(effect.x, effect.y, size * 0.35);
+    }
+  }
+}
+
 
 function drawTimeUI(timeLeft) {
   fill(255);
@@ -124,6 +236,9 @@ function drawTimeUI(timeLeft) {
   text("Time: " + max(0, timeLeft), 20, 30);
 
   if (darkSide !== null) {
-    text("Dark Side: " + darkSide, 20, 55);
+    text("Frozen Side: " + darkSide, 20, 55);
+  }
+  if (goldenFirefly !== null) {
+    text("Golden firefly is here", 20, 80);
   }
 }
