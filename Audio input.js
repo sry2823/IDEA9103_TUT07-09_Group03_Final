@@ -14,9 +14,9 @@ let soundSlowStep = 0.04;
 let maxSoundSlow = 6;
 
 function preload() {
-  bgSongs[0] = loadSound("assets/midnight-forest.mp3");
-  bgSongs[1] = loadSound("assets/magic-forest.mp3");
-  bgSongs[2] = loadSound("assets/mysterious-forest-lofi.mp3");
+  bgSongs[0] = loadSound("assets/assets-midnight-forest.mp3");
+  bgSongs[1] = loadSound("assets/assets-magic-forest.mp3");
+  bgSongs[2] = loadSound("assets/assets-mysterious-forest-lofi.mp3");
 }
 
 function mousePressed() {
