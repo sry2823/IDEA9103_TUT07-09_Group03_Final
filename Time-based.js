@@ -91,3 +91,39 @@ function activateDarkSide() {
   darkStartTime = millis();
 }
 
+function canCatchFirefly(firefly) {
+  if (darkSide === "cool" && firefly.type === "cool") {
+    return false;
+  }
+
+  if (darkSide === "warm" && firefly.type === "warm") {
+    return false;
+  }
+
+  return true;
+}
+
+function drawDarkSide() {
+  if (darkSide === "cool") {
+    noStroke();
+    fill(0, 180);
+    rect(0, 0, width / 2, height);
+  }
+
+  if (darkSide === "warm") {
+    noStroke();
+    fill(0, 180);
+    rect(width / 2, 0, width / 2, height);
+  }
+}
+
+function drawTimeUI(timeLeft) {
+  fill(255);
+  textSize(16);
+  textAlign(LEFT);
+  text("Time: " + max(0, timeLeft), 20, 30);
+
+  if (darkSide !== null) {
+    text("Dark Side: " + darkSide, 20, 55);
+  }
+}
