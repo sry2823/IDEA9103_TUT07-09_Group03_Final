@@ -55,7 +55,7 @@ function randomlyDisappearFireflies() {
   let disappearNum = floor(random(1, 4));
 
   for (let i = 0; i < disappearNum; i++) {
-    let randomFirefly = random(fireflies);
+    let randomFirefly = random(gameFireflies);
 
     if (
       randomFirefly &&
@@ -107,13 +107,13 @@ function drawDarkSide() {
   if (darkSide === "cool") {
     noStroke();
     fill(0, 180);
-    rect(0, 0, width / 2, height);
+    rect(width / 2, 0, width / 2, height);
   }
 
   if (darkSide === "warm") {
     noStroke();
     fill(0, 180);
-    rect(width / 2, 0, width / 2, height);
+    rect(0, 0, width / 2, height);
   }
 }
 

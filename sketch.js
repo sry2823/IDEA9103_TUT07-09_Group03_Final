@@ -10,10 +10,10 @@ let buttonY;
 let buttonW = 220;
 let buttonH = 60;
 
-// Preload image assets
+// Preload image music assets
 function preload() {
-  // Load the background image
   bg = loadImage("background.png");
+  preloadAudioFiles();
 }
 
 function setup() {
