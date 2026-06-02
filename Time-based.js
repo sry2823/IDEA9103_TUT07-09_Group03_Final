@@ -51,3 +51,43 @@ function timeSystem() {
   drawDarkSide();
 }
 
+function randomlyDisappearFireflies() {
+  let disappearNum = floor(random(1, 4));
+
+  for (let i = 0; i < disappearNum; i++) {
+    let randomFirefly = random(fireflies);
+
+    if (
+      randomFirefly &&
+      !randomFirefly.caught &&
+      randomFirefly.type !== "gold" &&
+      randomFirefly.visible !== false
+    ) {
+      randomFirefly.visible = false;
+    }
+  }
+}
+
+function createGoldenFirefly() {
+  if (goldenFirefly === null) {
+    goldenFirefly = new Firefly("gold");
+  }
+}
+
+function catchGoldenFirefly() {
+  if (goldenFirefly !== null) {
+    gameTime += 5;
+    goldenFirefly = null;
+  }
+}
+
+function activateDarkSide() {
+  if (random(1) < 0.5) {
+    darkSide = "cool";
+  } else {
+    darkSide = "warm";
+  }
+
+  darkStartTime = millis();
+}
+
