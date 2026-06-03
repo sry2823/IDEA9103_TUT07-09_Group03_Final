@@ -56,6 +56,13 @@ function timeSystem() {
     return;
   }
 
+  let now = millis();
+  let dt = now - lastTimeTick;
+  lastTimeTick = now;
+
+ let elapsedSeconds = floor((now - roundStartTime) / 1000);
+  roundTimeLeft = max(0, gameTime - elapsedSeconds);
+
   if (roundTimeLeft <= 0) {
     if (leftCaptured >= leftTarget && rightCaptured >= rightTarget) {
       setGameResult("win");
@@ -65,15 +72,13 @@ function timeSystem() {
     return;
   }
 
-  updateRedFireflyLife(dt);
-
   if (!areTimedEventsPaused()) {
+    updateRedFireflyLife(dt);
     updateDisappearTimer(dt);
     updateRedTimer(dt);
     updateFreezeTimer(dt);
+    updateFreezeLife(dt);
   }
-
-  updateFreezeLife(dt);
 }
 
 function areTimedEventsPaused() {
