@@ -374,6 +374,10 @@ function drawTimeLabel() {
   textSize(18);
   fill(242, 248, 255);
   text("Time Left: " + max(0, roundTimeLeft), width / 2, 72);
+  textStyle(NORMAL);
+  textSize(13);
+  fill(224, 236, 255, 215);
+  text('Vocalize "Eee" for Orange or "Ooh" for Blue.', width / 2, 98);
 }
 
 // Display the capture progress for one side.

@@ -19,7 +19,15 @@ let oohSlowAmount = 0;
 let eeeSlowAmount = 0;
 let soundSlowStep = 0.35;
 let maxSoundSlow = 9;
-let voiceCaptureThreshold = 1.2;
+let voiceEnergyThreshold = 32;
+let voiceSlowDuration = 5000;
+let voiceSlowRampDuration = 500;
+let voiceSlowFactor = 0.22;
+let leftVoiceSlowStart = -10000;
+let rightVoiceSlowStart = -10000;
+let wasHearingOoh = false;
+let wasHearingEee = false;
+
 let musicalNoteImg = null;
 let silverNote = null;
 let silverNoteHasAppeared = false;
@@ -84,6 +92,10 @@ function resetAudioRound() {
   musicSpeed = baseSpeed;
   oohSlowAmount = 0;
   eeeSlowAmount = 0;
+  leftVoiceSlowStart = -10000;
+  rightVoiceSlowStart = -10000;
+  wasHearingOoh = false;
+  wasHearingEee = false;
   lastMusicReadTime = 0;
   musicPartStartTime = 0;
 
@@ -183,79 +195,93 @@ function updateMusicSpeed() {
 }
 
 // Analyze microphone input to slow fireflies using voice sounds.
-
 function updateVoiceSlow() {
   if (micFft === null) {
     return;
   }
-  
+
   micFft.analyze();
 
-  let oohEnergy = micFft.getEnergy(180, 700);
-  let eeeEnergy = micFft.getEnergy(1800, 3600);
+  let oohEnergy = micFft.getEnergy(150, 750);
+  let eeeEnergy = micFft.getEnergy(900, 4200);
+  let voiceEnergy = micFft.getEnergy(120, 4200);
+  let now = millis();
+  let heardOoh = voiceEnergy > voiceEnergyThreshold && oohEnergy > 35 && oohEnergy > eeeEnergy * 1.08;
+  let heardEee = voiceEnergy > voiceEnergyThreshold && eeeEnergy > 28 && eeeEnergy > oohEnergy * 0.82;
 
-  if (oohEnergy > 35 && oohEnergy > eeeEnergy * 1.18) {
-    oohSlowAmount = min(oohSlowAmount + soundSlowStep, maxSoundSlow);
+  if (heardOoh) {
+    if (!wasHearingOoh) {
+      rightVoiceSlowStart = now;
+    }
+    oohSlowAmount = maxSoundSlow;
   } else {
     oohSlowAmount = max(oohSlowAmount - soundSlowStep * 0.65, 0);
   }
 
-  if (eeeEnergy > 35 && eeeEnergy > oohEnergy * 1.18) {
-    eeeSlowAmount = min(eeeSlowAmount + soundSlowStep, maxSoundSlow);
+  if (heardEee) {
+    if (!wasHearingEee) {
+      leftVoiceSlowStart = now;
+    }
+    eeeSlowAmount = maxSoundSlow;
   } else {
     eeeSlowAmount = max(eeeSlowAmount - soundSlowStep * 0.65, 0);
   }
+
+  wasHearingOoh = heardOoh;
+  wasHearingEee = heardEee;
 }
 
 // Calculate the current movement speed for a specific firefly.
-
 function getFireflySpeed(firefly) {
-  if (firefly.side === "left" && eeeSlowAmount > 0.5) {
-    return constrain(2.2 + (maxSoundSlow - eeeSlowAmount) * 0.18, 1.2, 4.5);
-  }
-
-  if (firefly.side === "right" && oohSlowAmount > 0.5) {
-    return constrain(2.2 + (maxSoundSlow - oohSlowAmount) * 0.18, 1.2, 4.5);
-  }
-
-  return constrain(musicSpeed, 3, 20);
+  let normalSpeed = constrain(musicSpeed, 3, 20);
+  let slowScale = getSideSlowSpeedScale(firefly.side);
+  return constrain(normalSpeed * slowScale, 0.8, 20);
 }
 
 // Convert firefly movement speed into a scale value.
-
 function getFireflySpeedScale(firefly) {
   return getFireflySpeed(firefly) / baseSpeed;
 }
 
-// A capture can only begin after the player is actively using Ooh or Eee.
-function isAnyVoiceControlActive() {
-  return oohSlowAmount > voiceCaptureThreshold || eeeSlowAmount > voiceCaptureThreshold;
-}
-
-// Left fireflies require Eee; right fireflies require Ooh.
-function isVoiceControlActiveForSide(side) {
+function getSideVoiceSlowStart(side) {
   if (side === "left") {
-    return eeeSlowAmount > voiceCaptureThreshold;
+    return leftVoiceSlowStart;
   }
 
   if (side === "right") {
-    return oohSlowAmount > voiceCaptureThreshold;
+    return rightVoiceSlowStart;
   }
 
-  return false;
+  return -10000;
 }
 
-function canStartCaptureAfterVoice(kind, target) {
+function isSideVoiceSlowActive(side) {
+  return millis() - getSideVoiceSlowStart(side) < voiceSlowDuration;
+}
+
+function getSideSlowSpeedScale(side) {
+  let age = millis() - getSideVoiceSlowStart(side);
+
+  if (age < 0 || age > voiceSlowDuration) {
+    return 1;
+  }
+
+  let slowProgress = constrain(age / voiceSlowRampDuration, 0, 1);
+  return lerp(1, voiceSlowFactor, slowProgress);
+}
+
+function canStartCaptureDuringSideSlow(kind, target) {
   if (kind === "note") {
-    return isAnyVoiceControlActive();
+    return isSideVoiceSlowActive("left") || isSideVoiceSlowActive("right");
   }
 
   if (target !== null && target.side !== undefined) {
-    return isVoiceControlActiveForSide(target.side);
+    return isSideVoiceSlowActive(target.side);
   }
 
   return false;
 }
+
 
 // Reset the special silver note and ECG event for a new round.
 
