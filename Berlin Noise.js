@@ -380,6 +380,8 @@ function drawTimeLabel() {
   text('Vocalize "Eee" for Orange or "Ooh" for Blue.', width / 2, 98);
 }
 
+
+
 // Display the capture progress for one side.
 function drawSideCounter(side) {
   let x = side === "left" ? width * 0.25 : width * 0.75;

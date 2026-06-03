@@ -1,13 +1,18 @@
-// Main p5 file: background, start screen, and draw loop.
+// Main p5 file: global canvas setup, start screen, background drawing, and shared visual helpers.
 
+// Core image assets used before the round begins.
 let bg;
 let paperImg;
+
+// Decorative fireflies for the start screen only. Gameplay fireflies live in Berlin Noise.js.
 let fireflies = [];
 
+// Button bounds are stored as objects so the same values can be used for drawing and hit-testing.
 let startButtonBounds = { x: 0, y: 0, w: 360, h: 130 };
 let gameTopButtonBounds = { x: 0, y: 0, w: 310, h: 38 };
 let endButtonBounds = { x: 0, y: 0, w: 260, h: 54 };
 
+// p5 calls preload before setup, so all image and audio assets can be ready before drawing begins.
 function preload() {
   bg = loadImage("background.png");
   paperImg = loadImage("assets/paper.png");
@@ -16,6 +21,7 @@ function preload() {
   preloadUserInputAssets();
 }
 
+// Create a full-window canvas and prepare the first start-screen firefly layout.
 function setup() {
   createCanvas(windowWidth, windowHeight);
   textAlign(CENTER, CENTER);
@@ -24,6 +30,7 @@ function setup() {
   createFireflies();
 }
 
+// Route the drawing work to the correct screen based on the current game state.
 function draw() {
   background(0);
 
@@ -38,6 +45,7 @@ function draw() {
   drawCustomCursor();
 }
 
+// Keep the canvas responsive and rebuild positions when the browser size changes.
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   updateLayoutValues();
@@ -49,6 +57,7 @@ function windowResized() {
   }
 }
 
+// Store responsive UI dimensions in one place so every screen uses the same layout logic.
 function updateLayoutValues() {
   startButtonBounds.w = constrain(width * 0.32, 310, 520);
   startButtonBounds.h = constrain(height / 6, 105, 160);
@@ -63,6 +72,7 @@ function updateLayoutValues() {
   topUIHeight = 118;
 }
 
+// Draw the forest background and a dark wash so glowing objects stay readable.
 function drawFullBackground() {
   if (bg) {
     image(bg, 0, 0, width, height);
@@ -76,6 +86,7 @@ function drawFullBackground() {
   rect(0, 0, width, height);
 }
 
+// The start screen combines the background, ambient fireflies, story paper, and start button.
 function drawStartScreen() {
   drawFullBackground();
   updateAndDrawStartFireflies();
@@ -83,6 +94,7 @@ function drawStartScreen() {
   drawStartButton();
 }
 
+// Build an even 8 x 5 distribution so the start screen always shows exactly 40 fireflies.
 function createFireflies() {
   fireflies = [];
 
@@ -114,6 +126,7 @@ function createFireflies() {
   }
 }
 
+// Move the start-screen fireflies gently with noise so the title screen feels alive.
 function updateAndDrawStartFireflies() {
   blendMode(ADD);
 
@@ -155,9 +168,10 @@ function updateAndDrawStartFireflies() {
   blendMode(BLEND);
 }
 
+// Draw the rule/story text on the paper image asset instead of generating a paper shape in code.
 function drawOldPaperNotice() {
-  let noticeW = constrain(width * 0.78, 320, 920);
-  let noticeH = constrain(height * 0.31, 215, 295);
+  let noticeW = constrain(width * 0.9, 720, 1380);
+  let noticeH = constrain(height * 0.28, 220, 300);
   let noticeX = width / 2;
   let noticeY = max(height * 0.24, startButtonBounds.y - startButtonBounds.h / 2 - noticeH / 2 - 34);
 
@@ -167,23 +181,23 @@ function drawOldPaperNotice() {
     imageMode(CORNER);
   }
 
-  let bodySize = constrain(width * 0.014, 11, 16);
+  let bodySize = constrain(width * 0.0105, 10, 13);
   let smallSize = constrain(width * 0.012, 10, 14);
-  let y = noticeY - noticeH * 0.3;
-  let lineGap = noticeH * 0.095;
+  let y = noticeY - noticeH * 0.31;
+  let lineGap = noticeH * 0.1;
 
   textAlign(CENTER, CENTER);
   textFont("Dancing Script, Georgia, serif");
   textStyle(NORMAL);
   textSize(bodySize);
-  fill(72, 42, 20);
-  text("What you see are not ordinary fireflies, but shattered stars fallen from the sky.", noticeX, y, noticeW * 0.72, lineGap * 1.6);
-  text("Fragments of red giants have fallen as warm Sundrops, and the dust of white dwarfs as cool Moonbeams.", noticeX, y + lineGap * 1.15, noticeW * 0.72, lineGap * 1.8);
-  text("They are lost in this mystic forest, waiting for your voice guiding.", noticeX, y + lineGap * 2);
+  fill(255, 248, 232, 238);
+  text("What you see are not ordinary fireflies, but shattered stars fallen from the sky.", noticeX, y);
+  text("Fragments of red giants became warm Sundrops; white dwarf dust became cool Moonbeams.", noticeX, y + lineGap);
+  text("They are lost in this mystic forest, waiting for your voice to guide them.", noticeX, y + lineGap * 2);
 
   textFont("Georgia, serif");
   textSize(smallSize);
-  fill(64, 38, 20);
+  fill(255, 248, 232, 238);
   text("Your mission is to catch two types of fireflies:", noticeX, y + lineGap * 3.45);
 
   textStyle(BOLD);
@@ -193,11 +207,12 @@ function drawOldPaperNotice() {
   text("Moonbeams", noticeX + noticeW * 0.16, y + lineGap * 4.25);
 
   textStyle(NORMAL);
-  fill(64, 38, 20);
+  fill(255, 248, 232, 238);
   text("You have 120 seconds each round, with surprises along the way.", noticeX, y + lineGap * 5.05);
   text("Are you ready to catch?", noticeX, y + lineGap * 5.8);
 }
 
+// Draw the large magical start button and keep it visually inviting with pulse and float motion.
 function drawStartButton() {
   let b = startButtonBounds;
   let hover = isMouseInside(b);
@@ -232,6 +247,7 @@ function drawStartButton() {
   text("Game Start", b.x, b.y + floatY + b.h * 0.26);
 }
 
+// Shared glow renderer used by start-screen and normal gameplay fireflies.
 function drawBreathingLight(x, y, coreSize, maxGlow, speed, offset, outerColor, middleColor, innerColor, alphaScale) {
   let t = (frameCount * speed + offset) % 1;
   let breath = sin(t * PI);
@@ -259,6 +275,7 @@ function drawBreathingLight(x, y, coreSize, maxGlow, speed, offset, outerColor, 
   circle(x, y, coreSize * 0.45);
 }
 
+// Reduce text size only when needed so long button labels never overflow their button.
 function fitText(label, maxW, startSize, minSize) {
   let s = startSize;
   textSize(s);

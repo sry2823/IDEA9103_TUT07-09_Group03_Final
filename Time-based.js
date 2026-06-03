@@ -179,6 +179,7 @@ function moveRedFirefly() {
   let targetVX = map(nx, 0, 1, -2.8, 2.8) * slowScale;
   let targetVY = map(ny, 0, 1, -2.8, 2.8) * slowScale;
 
+
   redFirefly.vx = lerp(redFirefly.vx, targetVX, 0.05);
   redFirefly.vy = lerp(redFirefly.vy, targetVY, 0.05);
   redFirefly.x += redFirefly.vx;
