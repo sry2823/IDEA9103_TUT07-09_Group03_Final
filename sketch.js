@@ -1,37 +1,32 @@
 // Main p5 file: background, start screen, and draw loop.
+
 let bg;
+let paperImg;
 let fireflies = [];
 
-let startButtonBounds = { x:0, y:0, w: 360, h:130 };
-let gameTopButtonBounds = { x:0, y:0, w: 310, h:38 };
-let endButtonBounds = { x:0, y:0, w: 260, h:54 };
+let startButtonBounds = { x: 0, y: 0, w: 360, h: 130 };
+let gameTopButtonBounds = { x: 0, y: 0, w: 310, h: 38 };
+let endButtonBounds = { x: 0, y: 0, w: 260, h: 54 };
 
-// Preload image music assets
 function preload() {
   bg = loadImage("background.png");
+  paperImg = loadImage("assets/paper.png");
   preloadAudioFiles();
   preloadTimeAssets();
   preloadUserInputAssets();
 }
 
 function setup() {
-  // Create a canvas that fills the entire browser window
   createCanvas(windowWidth, windowHeight);
-
-  // Align text to the center
   textAlign(CENTER, CENTER);
-
   noStroke();
   updateLayoutValues();
-
-  // Generate fireflies for the start screen
   createFireflies();
 }
 
 function draw() {
   background(0);
 
-  // If the game has started, draw the game scene
   if (gameState === "playing") {
     drawGameScene();
   } else if (gameState === "win" || gameState === "lose") {
@@ -43,13 +38,10 @@ function draw() {
   drawCustomCursor();
 }
 
-// Automatically resize the canvas when the browser window changes size
 function windowResized() {
-  // Resize the canvas to match the current browser window
   resizeCanvas(windowWidth, windowHeight);
   updateLayoutValues();
 
-  // If still on the start screen, regenerate fireflies to fit the new screen size
   if (gameState === "playing") {
     rebuildGameBounds();
   } else {
@@ -91,31 +83,23 @@ function drawStartScreen() {
   drawStartButton();
 }
 
-// Randomly but evenly generate 40 fireflies
 function createFireflies() {
   fireflies = [];
 
-  // Divide the screen into a 8 x 5 grid
   let total = 40;
   let cols = 8;
   let rows = 5;
-
-  // Set margins to keep fireflies away from the screen edges
   let marginX = width * 0.06;
   let marginY = height * 0.08;
-
-  // Calculate the width and height of each grid cell
   let cellW = (width - marginX * 2) / cols;
   let cellH = (height - marginY * 2) / rows;
 
-  // Generate one firefly inside each grid cell
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       if (fireflies.length >= total) {
         return;
       }
 
-      // Store firefly properties
       fireflies.push({
         x: marginX + col * cellW + random(cellW),
         y: marginY + row * cellH + random(cellH),
@@ -171,43 +155,30 @@ function updateAndDrawStartFireflies() {
   blendMode(BLEND);
 }
 
-
-// Draw the old paper-style mission notice panel.
 function drawOldPaperNotice() {
   let noticeW = constrain(width * 0.78, 320, 920);
   let noticeH = constrain(height * 0.31, 215, 295);
   let noticeX = width / 2;
   let noticeY = max(height * 0.24, startButtonBounds.y - startButtonBounds.h / 2 - noticeH / 2 - 34);
 
-  rectMode(CENTER);
-  noStroke();
-  fill(20, 12, 4, 95);
-  rect(noticeX + 5, noticeY + 7, noticeW, noticeH, 18);
+  if (paperImg) {
+    imageMode(CENTER);
+    image(paperImg, noticeX, noticeY, noticeW, noticeH);
+    imageMode(CORNER);
+  }
 
-  fill(230, 202, 145, 232);
-  rect(noticeX, noticeY, noticeW, noticeH, 18);
-
-  fill(250, 229, 172, 160);
-  rect(noticeX, noticeY - 4, noticeW - 20, noticeH - 18, 14);
-
-  stroke(83, 49, 22, 130);
-  strokeWeight(2);
-  line(noticeX - noticeW / 2 + 22, noticeY - noticeH / 2 + 18, noticeX + noticeW / 2 - 26, noticeY - noticeH / 2 + 13);
-  line(noticeX - noticeW / 2 + 18, noticeY + noticeH / 2 - 16, noticeX + noticeW / 2 - 20, noticeY + noticeH / 2 - 20);
-  noStroke();
-
-  let bodySize = constrain(width * 0.018, 13, 22);
-  let smallSize = constrain(width * 0.015, 12, 18);
-  let y = noticeY - noticeH * 0.32;
-  let lineGap = noticeH * 0.105;
+  let bodySize = constrain(width * 0.014, 11, 16);
+  let smallSize = constrain(width * 0.012, 10, 14);
+  let y = noticeY - noticeH * 0.3;
+  let lineGap = noticeH * 0.095;
 
   textAlign(CENTER, CENTER);
   textFont("Dancing Script, Georgia, serif");
   textStyle(NORMAL);
   textSize(bodySize);
   fill(72, 42, 20);
-  text("What you see are not ordinary fireflies, but shattered stars fallen from the sky.", noticeX, y);
-  text("Fragments of red giants have fallen as warm Sundrops, and the dust of white dwarfs as cool Moonbeams.", noticeX, y + lineGap);
+  text("What you see are not ordinary fireflies, but shattered stars fallen from the sky.", noticeX, y, noticeW * 0.72, lineGap * 1.6);
+  text("Fragments of red giants have fallen as warm Sundrops, and the dust of white dwarfs as cool Moonbeams.", noticeX, y + lineGap * 1.15, noticeW * 0.72, lineGap * 1.8);
   text("They are lost in this mystic forest, waiting for your voice guiding.", noticeX, y + lineGap * 2);
 
   textFont("Georgia, serif");
@@ -227,7 +198,6 @@ function drawOldPaperNotice() {
   text("Are you ready to catch?", noticeX, y + lineGap * 5.8);
 }
 
-// Draw the animated start button with hover and glow effects.
 function drawStartButton() {
   let b = startButtonBounds;
   let hover = isMouseInside(b);
@@ -262,7 +232,6 @@ function drawStartButton() {
   text("Game Start", b.x, b.y + floatY + b.h * 0.26);
 }
 
-// Create a breathing light effect with pulsing glow rings.
 function drawBreathingLight(x, y, coreSize, maxGlow, speed, offset, outerColor, middleColor, innerColor, alphaScale) {
   let t = (frameCount * speed + offset) % 1;
   let breath = sin(t * PI);
@@ -290,7 +259,6 @@ function drawBreathingLight(x, y, coreSize, maxGlow, speed, offset, outerColor, 
   circle(x, y, coreSize * 0.45);
 }
 
-// Automatically reduce text size until it fits within the target width.
 function fitText(label, maxW, startSize, minSize) {
   let s = startSize;
   textSize(s);
