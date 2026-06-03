@@ -1,61 +1,246 @@
-let gameTime = 100;
-let startTime;
+let gameTime = 120;
+let roundstartTime = 0;
+let roundTimeLeft = 120;
+let lastTimeTick = 0;
 
-let goldenFirefly = null;
+let redFirefly = null;
+let redTimer = 0;
+let redLifeTimer = 0;
+let redInterval = 15000;
+let redLifeDuration = 20000;
 
-let lastDisappearTime = 0;
-let lastGoldenTime = 0;
-let lastDarkTime = 0;
+let freezeSide = null;
+let freezeTimer = 0;
+let freezeLifeTimer = 0;
+let freezeInterval = 30000;
+let freezeDuration = 5000;
+let frozenImg = null;
 
-let darkSide = null;
-let darkStartTime = 0;
-let darkDuration = 5000;
-
+let disappearTimer = 0;
+let disappearInterval = 15000;
 let disappearedFireflies = [];
 
-function startTimeSystem() {
-  startTime = millis();
-  lastDisappearTime = millis();
-  lastGoldenTime = millis();
-  lastDarkTime = millis();
+function preloadTimeAssets() {
+  frozenImg = loadImage(
+    "frozen.png",
+    function (img) {
+      frozenImg = img;
+    },
+    function () {
+      frozenImg = null;
+    }
+  );
+}
 
-  goldenFirefly = null;
-  darkSide = null;
+
+function startTimeSystem() {
+  gameTime = 120;
+  roundStartTime = millis();
+  lastTimeTick = millis();
+  roundTimeLeft = gameTime;
+
+  redFirefly = null;
+  redTimer = 0;
+  redLifeTimer = 0;
+
+  freezeSide = null;
+  freezeTimer = 0;
+  freezeLifeTimer = 0;
+
+  disappearTimer = 0;
   disappearedFireflies = [];
 }
 
 function timeSystem() {
-  let currentTime = millis();
-  let timeLeft = gameTime - floor((currentTime - startTime) / 1000);
-
-  if (timeLeft <= 0) {
-    gameState = "lose";
+   if (gameState !== "playing") {
+    return;
   }
 
-  if (currentTime - lastDisappearTime > 15000) {
-    randomlyDisappearOneFirefly();
-    lastDisappearTime = currentTime;
+  if (roundTimeLeft <= 0) {
+    if (leftCaptured >= leftTarget && rightCaptured >= rightTarget) {
+      setGameResult("win");
+    } else {
+      setGameResult("lose");
+    }
+    return;
   }
 
-  if (currentTime - lastGoldenTime > 10000) {
-    createGoldenFirefly();
-    lastGoldenTime = currentTime;
+  updateRedFireflyLife(dt);
+
+  if (!areTimedEventsPaused()) {
+    updateDisappearTimer(dt);
+    updateRedTimer(dt);
+    updateFreezeTimer(dt);
   }
 
-  if (currentTime - lastDarkTime > 30000) {
-    activateDarkSide();
-    lastDarkTime = currentTime;
-  }
-
-  if (darkSide !== null && currentTime - darkStartTime > darkDuration) {
-    darkSide = null;
-  }
-
-  drawGoldenFirefly();
-  drawDisappearEffects();
-  drawTimeUI(timeLeft);
-  drawDarkSide();
+  updateFreezeLife(dt);
 }
+
+function areTimedEventsPaused() {
+  return activeCapture !== null || silverNote !== null || ecgEventActive;
+}
+
+function updateRedTimer(dt) {
+  if (redFirefly !== null || freezeSide !== null) {
+    return;
+  }
+redTimer += dt;
+
+  if (redTimer >= redInterval) {
+    createRedFirefly();
+    redTimer = 0;
+  }
+}
+
+function createRedFirefly() {
+  let bounds = {
+    minX: 35,
+    maxX: width - 35,
+    minY: topUIHeight + 35,
+    maxY: height - 35
+  };
+
+  redFirefly = {
+    side: random(["left", "right"]),
+    type: "red",
+    visible: true,
+    caught: false,
+    x: random(bounds.minX, bounds.maxX),
+    y: random(bounds.minY, bounds.maxY),
+    minX: bounds.minX,
+    maxX: bounds.maxX,
+    minY: bounds.minY,
+    maxY: bounds.maxY,
+    coreSize: 8,
+    maxGlow: 78,
+    breatheSpeed: 0.007,
+    breatheOffset: random(1),
+    noiseSeedX: random(1000),
+    noiseSeedY: random(1000),
+    noiseSpeed: random(0.007, 0.012),
+    vx: random(-2, 2),
+    vy: random(-2, 2)
+  };
+
+  redLifeTimer = 0;
+}
+
+function updateRedFireflyLife(dt) {
+  if (redFirefly === null) {
+    return;
+  }
+
+  if (activeCapture !== null) {
+    return;
+  }
+
+  redLifeTimer += dt;
+
+  if (redLifeTimer >= redLifeDuration) {
+    makeRedFireflyDisappear();
+  }
+}
+
+function drawRedFirefly() {
+  if (redFirefly === null || gameState !== "playing") {
+    return;
+  }
+
+  if (activeCapture === null || activeCapture.kind !== "red") {
+    moveRedFirefly();
+  }
+
+  blendMode(ADD);
+  drawBreathingLight(
+    redFirefly.x,
+    redFirefly.y,
+    redFirefly.coreSize,
+    redFirefly.maxGlow,
+    redFirefly.breatheSpeed,
+    redFirefly.breatheOffset,
+    color(255, 25, 25),
+    color(255, 80, 60),
+    color(255, 230, 210),
+    1
+  );
+  blendMode(BLEND);
+}
+
+function moveRedFirefly() {
+  let time = frameCount * redFirefly.noiseSpeed;
+  let nx = noise(redFirefly.noiseSeedX, time);
+  let ny = noise(redFirefly.noiseSeedY, time);
+  let targetVX = map(nx, 0, 1, -2.8, 2.8);
+  let targetVY = map(ny, 0, 1, -2.8, 2.8);
+
+  redFirefly.vx = lerp(redFirefly.vx, targetVX, 0.05);
+  redFirefly.vy = lerp(redFirefly.vy, targetVY, 0.05);
+  redFirefly.x += redFirefly.vx;
+  redFirefly.y += redFirefly.vy;
+
+  if (redFirefly.x < redFirefly.minX || redFirefly.x > redFirefly.maxX) {
+    redFirefly.vx *= -1;
+    redFirefly.noiseSeedX += random(20, 80);
+  }
+
+  if (redFirefly.y < redFirefly.minY || redFirefly.y > redFirefly.maxY) {
+    redFirefly.vy *= -1;
+    redFirefly.noiseSeedY += random(20, 80);
+  }
+
+  redFirefly.x = constrain(redFirefly.x, redFirefly.minX, redFirefly.maxX);
+  redFirefly.y = constrain(redFirefly.y, redFirefly.minY, redFirefly.maxY);
+  redFirefly.side = redFirefly.x < width / 2 ? "left" : "right";
+}
+
+function catchRedFirefly() {
+  if (redFirefly !== null) {
+    gameTime += 5;
+    makeRedFireflyDisappear();
+  }
+}
+
+function makeRedFireflyDisappear() {
+  if (redFirefly !== null) {
+    addDisappearEffect(redFirefly.x, redFirefly.y, "red");
+  }
+
+  redFirefly = null;
+  redLifeTimer = 0;
+  redTimer = 0;
+}
+
+function updateFreezeTimer(dt) {
+  if (freezeSide !== null || redFirefly !== null) {
+    return;
+  }
+
+  freezeTimer += dt;
+
+  if (freezeTimer >= freezeInterval) {
+    freezeSide = random(["left", "right"]);
+    freezeLifeTimer = 0;
+    freezeTimer = 0;
+  }
+}
+
+function updateFreezeLife(dt) {
+  if (freezeSide === null) {
+    return;
+  }
+
+  if (activeCapture !== null || ecgEventActive || silverNote !== null) {
+    return;
+  }
+
+  freezeLifeTimer += dt;
+
+  if (freezeLifeTimer >= freezeDuration) {
+    freezeSide = null;
+    freezeLifeTimer = 0;
+  }
+}
+
 
 function randomlyDisappearOneFirefly() {
   let visibleFireflies = [];
@@ -80,125 +265,141 @@ function randomlyDisappearOneFirefly() {
   }
 }
 
-function createGoldenFirefly() {
-  if (goldenFirefly === null) {
-    let side = random(["left", "right"]);
-    let minX;
-    let maxX;
+function updateFreezeLife(dt) {
+  if (freezeSide === null) {
+    return;
+  }
 
-    if (side === "left") {
-      minX = 35;
-      maxX = width / 2 - 35;
-    } else {
-      minX = width / 2 + 35;
-      maxX = width - 35;
-    }
+  if (activeCapture !== null || ecgEventActive || silverNote !== null) {
+    return;
+  }
 
-     goldenFirefly = {
-      side: side,
-      type: "gold",
-      visible: true,
-      caught: false,
-      x: random(minX, maxX),
-      y: random(topUIHeight + 35, height - 35),
-      coreSize: 8,
-      maxGlow: 75,
-      breatheSpeed: 0.006,
-      breatheOffset: random(1)
-    };
+  freezeLifeTimer += dt;
+
+  if (freezeLifeTimer >= freezeDuration) {
+    freezeSide = null;
+    freezeLifeTimer = 0;
   }
 }
 
-function drawGoldenFirefly() {
-  if (goldenFirefly !== null && goldenFirefly.visible !== false) {
-    blendMode(ADD);
+function updateFreezeLife(dt) {
+  if (freezeSide === null) {
+    return;
+  }
 
-    drawGameBreathingFirefly(
-      goldenFirefly.x,
-      goldenFirefly.y,
-      goldenFirefly.coreSize,
-      goldenFirefly.maxGlow,
-      goldenFirefly.breatheSpeed,
-      goldenFirefly.breatheOffset,
-      color(255, 180, 20),
-      color(255, 230, 80),
-      color(255, 255, 210)
-    );
+  if (activeCapture !== null || ecgEventActive || silverNote !== null) {
+    return;
+  }
 
-    blendMode(BLEND);
+  freezeLifeTimer += dt;
+
+  if (freezeLifeTimer >= freezeDuration) {
+    freezeSide = null;
+    freezeLifeTimer = 0;
   }
 }
 
-function catchGoldenFirefly() {
-  if (goldenFirefly !== null) {
-    gameTime += 5;
-    goldenFirefly = null;
+function drawFrozenSide() {
+  if (freezeSide === null || gameState !== "playing") {
+    return;
   }
+
+  let x = freezeSide === "left" ? 0 : width / 2;
+  let w = width / 2;
+  rectMode(CORNER);
+
+  if (frozenImg) {
+    tint(255, 135);
+    image(frozenImg, x, 0, w, height);
+    noTint();
+  }
+
+  noStroke();
+  fill(175, 225, 255, 70);
+  rect(x, 0, w, height);
+  fill(235, 250, 255, 35);
+  rect(x + 15, 15, w - 30, height - 30);
+
+  stroke(230, 250, 255, 100);
+  strokeWeight(2);
+  for (let i = 0; i < 12; i++) {
+    let lineX = x + random(w);
+    line(lineX, 0, lineX + random(-70, 70), height);
+  }
+  noStroke();
 }
 
-function activateDarkSide() {
-  if (random(1) < 0.5) {
-    darkSide = "cool";
-  } else {
-    darkSide = "warm";
+function isPointInFrozenSide(px, py) {
+  if (freezeSide === null) {
+    return false;
   }
 
-  darkStartTime = millis();
+  if (freezeSide === "left") {
+    return px < width / 2;
+  }
+
+  return px >= width / 2;
 }
 
 function isFireflyFrozen(firefly) {
-  if (darkSide === "cool" && firefly.type === "cool") {
+  if (freezeSide === "left" && firefly.side === "left") {
     return true;
   }
 
-  if (darkSide === "warm" && firefly.type === "warm") {
+  if (freezeSide === "right" && firefly.side === "right") {
     return true;
   }
 
   return false;
 }
 
-function canCatchFirefly(firefly) {
-  if (isFireflyFrozen(firefly)) {
-    return false;
-  }
+function updateDisappearTimer(dt) {
+  disappearTimer += dt;
 
-  return true;
-}
-
-function drawDarkSide() {
-  if (darkSide === "cool") {
-     drawIceBlock(width / 2, 0, width / 2, height);
-  }
-
-  if (darkSide === "warm") {
-   drawIceBlock(0, 0, width / 2, height);
+  if (disappearTimer >= disappearInterval) {
+    randomlyDisappearOneFirefly();
+    disappearTimer = 0;
   }
 }
 
-function drawIceBlock(x, y, w, h) {
-  noStroke();
+function randomlyDisappearOneFirefly() {
+  let choices = [];
 
-  fill(150, 220, 255, 85);
-  rect(x, y, w, h);
-
-  fill(230, 250, 255, 45);
-  rect(x + 15, y + 15, w - 30, h - 30);
-
-  stroke(230, 250, 255, 110);
-  strokeWeight(2);
-
-  for (let i = 0; i < 12; i++) {
-    let lineX = x + random(w);
-    line(lineX, y, lineX + random(-80, 80), y + h);
+  for (let f of gameFireflies) {
+    if (f.visible === true && f.caught === false && canAutoRemoveSide(f.side)) {
+      choices.push(f);
+    }
   }
 
-  for (let i = 0; i < 8; i++) {
-    let lineY = y + random(h);
-    line(x, lineY, x + w, lineY + random(-50, 50));
+  if (choices.length === 0) {
+    return;
   }
 
-  noStroke();
+  let selected = random(choices);
+  selected.visible = false;
+  addDisappearEffect(selected.x, selected.y, selected.side);
+}
+
+function canAutoRemoveSide(side) {
+  let visibleCount = 0;
+  let neededCount = side === "left" ? leftTarget - leftCaptured : rightTarget - rightCaptured;
+
+  for (let f of gameFireflies) {
+    if (f.side === side && f.visible === true && f.caught === false) {
+      visibleCount++;
+    }
+  }
+
+  return visibleCount > neededCount;
+}
+
+function addDisappearEffect(x, y, side) {
+  disappearedFireflies.push({
+    x: x,
+    y: y,
+    side: side,
+    startTime: millis()
+  });
 }
 
 function drawDisappearEffects() {
@@ -206,39 +407,34 @@ function drawDisappearEffects() {
     let effect = disappearedFireflies[i];
     let age = millis() - effect.startTime;
 
-    if (age > 900) {
+    if (age > 950) {
       disappearedFireflies.splice(i, 1);
-    } else {
-      let size = map(age, 0, 900, 10, 90);
-      let alpha = map(age, 0, 900, 220, 0);
-
-      noStroke();
-
-      if (effect.side === "left") {
-        fill(255, 160, 30, alpha);
-      } else {
-        fill(80, 190, 255, alpha);
-      }
-
-      circle(effect.x, effect.y, size);
-
-      fill(255, 255, 210, alpha);
-      circle(effect.x, effect.y, size * 0.35);
+      continue;
     }
+
+    let alpha = map(age, 0, 950, 230, 0);
+    let baseSize = map(age, 0, 950, 12, 82);
+
+    blendMode(ADD);
+    drawCrossStar(effect.x - baseSize * 0.28, effect.y, baseSize * 0.55, alpha);
+    drawCrossStar(effect.x + baseSize * 0.24, effect.y - baseSize * 0.18, baseSize * 0.35, alpha);
+    drawCrossStar(effect.x + baseSize * 0.1, effect.y + baseSize * 0.25, baseSize * 0.45, alpha);
+    blendMode(BLEND);
   }
 }
 
+function drawCrossStar(x, y, s, alpha) {
+  stroke(255, 255, 245, alpha);
+  strokeWeight(2);
+  line(x - s, y, x + s, y);
+  line(x, y - s, x, y + s);
+  noStroke();
+  fill(255, 255, 245, alpha * 0.65);
+  circle(x, y, s * 0.7);
+}
 
-function drawTimeUI(timeLeft) {
-  fill(255);
-  textSize(16);
-  textAlign(LEFT);
-  text("Time: " + max(0, timeLeft), 20, 30);
-
-  if (darkSide !== null) {
-    text("Frozen Side: " + darkSide, 20, 55);
-  }
-  if (goldenFirefly !== null) {
-    text("Golden firefly is here", 20, 80);
-  }
+function clearRoundTimeEvents() {
+  redFirefly = null;
+  freezeSide = null;
+  disappearedFireflies = [];
 }
