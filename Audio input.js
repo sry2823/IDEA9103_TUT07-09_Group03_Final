@@ -19,7 +19,7 @@ let oohSlowAmount = 0;
 let eeeSlowAmount = 0;
 let soundSlowStep = 0.35;
 let maxSoundSlow = 9;
-
+let voiceCaptureThreshold = 1.2;
 let musicalNoteImg = null;
 let silverNote = null;
 let silverNoteHasAppeared = false;
@@ -225,6 +225,36 @@ function getFireflySpeed(firefly) {
 
 function getFireflySpeedScale(firefly) {
   return getFireflySpeed(firefly) / baseSpeed;
+}
+
+// A capture can only begin after the player is actively using Ooh or Eee.
+function isAnyVoiceControlActive() {
+  return oohSlowAmount > voiceCaptureThreshold || eeeSlowAmount > voiceCaptureThreshold;
+}
+
+// Left fireflies require Eee; right fireflies require Ooh.
+function isVoiceControlActiveForSide(side) {
+  if (side === "left") {
+    return eeeSlowAmount > voiceCaptureThreshold;
+  }
+
+  if (side === "right") {
+    return oohSlowAmount > voiceCaptureThreshold;
+  }
+
+  return false;
+}
+
+function canStartCaptureAfterVoice(kind, target) {
+  if (kind === "note") {
+    return isAnyVoiceControlActive();
+  }
+
+  if (target !== null && target.side !== undefined) {
+    return isVoiceControlActiveForSide(target.side);
+  }
+
+  return false;
 }
 
 // Reset the special silver note and ECG event for a new round.
