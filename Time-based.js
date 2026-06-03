@@ -1,5 +1,5 @@
 let gameTime = 120;
-let roundstartTime = 0;
+let roundStartTime = 0;
 let roundTimeLeft = 120;
 let lastTimeTick = 0;
 
