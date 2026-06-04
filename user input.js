@@ -80,3 +80,19 @@ function keyPressed() {
     return false;
   }
 }
+// add basic firefly target detection 和 click validation
+function findClickedTarget() {let nearest = null;
+  let nearestDistance = 9999;
+  for（let f of gameFireflies）{if（！canClickNormalFirefly（f））{continue;}
+    let d = dist(mouseX, mouseY, f.x, f.y);
+    let hitRadius=f.coreSize+8;
+    if（d < hitRadius && d < nearestDistance）{nearest = f;
+      nearestDistance = d;
+    }
+    if (nearest !== null) {return { kind: "normal", target: nearest };
+  }return null;
+  function canClickNormalFirefly(f) {if (f.visible === false) {return false;}
+    if (f.caught === true) {return false;}
+    if(f.inQte === true){return false;}
+    return true;
+  }
