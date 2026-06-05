@@ -13,16 +13,15 @@ let redLifeTimer = 0;
 let redInterval = 15000;
 let redLifeDuration = 20000;
 
-// Frozen-side event state.
+// Frozen-side event state. The frozen image covers exactly one half of the game area.
 let freezeSide = null;
-let lastFreezeSide = null; 
+let lastFreezeSide = null;
 let freezeTimer = 0;
 let freezeLifeTimer = 0;
-let freezeInterval = 20000;
-let freezeDuration = 10000;
-let freezeCount = 0;
-let maxFreezeThisRound = 0;
+let freezeInterval = 12000;
+let freezeDuration = 5000;
 let frozenImg = null;
+let frozenVisibleBounds = null;
 let starImg = null;
 
 // Random disappearance event state and star-image burst effects.
@@ -30,18 +29,17 @@ let disappearTimer = 0;
 let disappearInterval = 10000;
 let disappearedFireflies = [];
 
-// Cooldown timer to prevent red firefly, freeze, or note events immediately after ECG finishes.
-let postEcgCooldown = 0;
-
 // Load time-event image assets once before the game starts.
 function preloadTimeAssets() {
   frozenImg = loadImage(
     "assets/frozen.png",
     function (img) {
       frozenImg = img;
+      frozenVisibleBounds = null;
     },
     function () {
       frozenImg = null;
+      frozenVisibleBounds = null;
     }
   );
 
@@ -71,14 +69,9 @@ function startTimeSystem() {
   lastFreezeSide = null;
   freezeTimer = 0;
   freezeLifeTimer = 0;
-  freezeCount = 0;
-  maxFreezeThisRound = floor(random(1, 4)); // Will be 1, 2, or 3
-  freezeInterval = random(15000, 25000); // Random initial wait time
 
   disappearTimer = 0;
   disappearedFireflies = [];
-  
-  postEcgCooldown = 0;
 }
 
 // Update the countdown and all time-triggered events.
@@ -102,14 +95,6 @@ function timeSystem() {
     return;
   }
 
-  // Lock the cooldown at 6 seconds while the ECG event is running.
-  // Once the ECG event stops, count down to 0 before allowing new events.
-  if (ecgEventActive) {
-    postEcgCooldown = 6000;
-  } else if (postEcgCooldown > 0) {
-    postEcgCooldown -= dt;
-  }
-
   updateRedFireflyLife(dt);
 
   if (!areTimedEventsPaused()) {
@@ -128,8 +113,7 @@ function areTimedEventsPaused() {
 
 // Spawn a red firefly every 15 seconds when allowed.
 function updateRedTimer(dt) {
-  // Pause the timer if ANY other special event is active, or if we are in the 6s ECG cooldown.
-  if (redFirefly !== null || freezeSide !== null || silverNote !== null || postEcgCooldown > 0) {
+  if (redFirefly !== null || freezeSide !== null) {
     return;
   }
 
@@ -272,39 +256,31 @@ function makeRedFireflyDisappear() {
   redTimer = 0;
 }
 
-// Start a frozen-side event on its own timer when no conflicting event exists.
+// Start a frozen-side event on its own timer when no conflicting red firefly exists.
 function updateFreezeTimer(dt) {
-  // Pause the timer if ANY other special event is active, or if we are in the 6s ECG cooldown.
-  if (freezeSide !== null || redFirefly !== null || silverNote !== null || postEcgCooldown > 0) {
-    return;
-  }
-
-  // Stop spawning if we have reached the maximum allowed freezes for this round.
-  if (freezeCount >= maxFreezeThisRound) {
+  if (freezeSide !== null || redFirefly !== null) {
     return;
   }
 
   freezeTimer += dt;
 
   if (freezeTimer >= freezeInterval) {
-    // Alternate sides: if left was frozen last, freeze right, and vice versa.
-    if (lastFreezeSide === "left") {
+    // The first frozen side is random; every later frozen event alternates sides.
+    if (lastFreezeSide === null) {
+      freezeSide = random(["left", "right"]);
+    } else if (lastFreezeSide === "left") {
       freezeSide = "right";
-    } else if (lastFreezeSide === "right") {
-      freezeSide = "left";
     } else {
-      freezeSide = random() < 0.5 ? "left" : "right";
+      freezeSide = "left";
     }
 
     lastFreezeSide = freezeSide;
-    freezeCount++;
     freezeLifeTimer = 0;
     freezeTimer = 0;
-    freezeInterval = random(25000, 35000); // Wait time for the next potential freeze
   }
 }
 
-// Keep the frozen image on screen for the specified duration.
+// Keep the frozen image on screen for five seconds.
 function updateFreezeLife(dt) {
   if (freezeSide === null) {
     return;
@@ -322,22 +298,85 @@ function updateFreezeLife(dt) {
   }
 }
 
-// Draw the frozen.png asset perfectly stretched over exactly half the screen.
+// Find the visible alpha area inside frozen.png so transparent padding cannot affect sizing.
+function getFrozenVisibleBounds() {
+  if (frozenImg === null) {
+    return null;
+  }
+
+  if (frozenVisibleBounds !== null) {
+    return frozenVisibleBounds;
+  }
+
+  frozenImg.loadPixels();
+
+  let minX = frozenImg.width;
+  let minY = frozenImg.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < frozenImg.height; y++) {
+    for (let x = 0; x < frozenImg.width; x++) {
+      let alphaIndex = (y * frozenImg.width + x) * 4 + 3;
+      let alphaValue = frozenImg.pixels[alphaIndex];
+
+      if (alphaValue > 10) {
+        minX = min(minX, x);
+        minY = min(minY, y);
+        maxX = max(maxX, x);
+        maxY = max(maxY, y);
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    frozenVisibleBounds = {
+      x: 0,
+      y: 0,
+      w: frozenImg.width,
+      h: frozenImg.height
+    };
+  } else {
+    frozenVisibleBounds = {
+      x: minX,
+      y: minY,
+      w: maxX - minX + 1,
+      h: maxY - minY + 1
+    };
+  }
+
+  return frozenVisibleBounds;
+}
+
+// Draw frozen.png by stretching its visible area to exactly one half of the viewport.
 function drawFrozenSide() {
   if (freezeSide === null || gameState !== "playing") {
     return;
   }
 
-  let stretchW = width / 2;
-  let stretchH = height;
-  let startX = freezeSide === "left" ? 0 : stretchW;
+  let halfW = width / 2;
+  let drawX = freezeSide === "left" ? 0 : halfW;
+  let drawY = 0;
+  let drawW = halfW;
+  let drawH = height;
 
   if (frozenImg) {
-    push(); // Forcefully isolate rendering settings to prevent bleed-over
-    tint(255, 102); 
-    imageMode(CORNER); 
-    // Draw the image exactly matching half width and full height of the canvas
-    image(frozenImg, startX, 0, stretchW, stretchH); 
+    let bounds = getFrozenVisibleBounds();
+
+    push();
+    imageMode(CORNER);
+    tint(255, 102);
+    image(
+      frozenImg,
+      drawX,
+      drawY,
+      drawW,
+      drawH,
+      bounds.x,
+      bounds.y,
+      bounds.w,
+      bounds.h
+    );
     noTint();
     pop();
   }
@@ -461,6 +500,5 @@ function drawDisappearEffects() {
 function clearRoundTimeEvents() {
   redFirefly = null;
   freezeSide = null;
-  lastFreezeSide = null;
   disappearedFireflies = [];
 }

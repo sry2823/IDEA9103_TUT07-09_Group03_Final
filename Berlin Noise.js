@@ -266,9 +266,22 @@ function drawRestartIcon(cx, cy, s) {
 }
 
 function drawTimeLabel() {
-  textFont("Roboto, Arial, sans-serif"); textStyle(BOLD); textAlign(CENTER, CENTER); textSize(18); fill(242, 248, 255);
-  text("Time Left: " + max(0, roundTimeLeft), width / 2, 72);
-  textStyle(NORMAL); textSize(13); fill(224, 236, 255, 215); text('Vocalize "Eee" for Orange or "Ooh" for Blue.', width / 2, 98);
+  textFont("Roboto, Arial, sans-serif"); 
+  textStyle(BOLD); 
+  textAlign(CENTER, CENTER); 
+  textSize(18); 
+  fill(242, 248, 255);
+  // Main countdown timer text
+  text("Time Left: " + max(0, roundTimeLeft), width / 2, 65);
+
+  // Subtitle instruction styling
+  textStyle(NORMAL); 
+  textSize(13); 
+  fill(224, 236, 255, 215); 
+  
+  // Line 1: Instruction for Orange side (Eee)
+  text('Vocalize  short  "Eee"  for  Orange  and  short  "Ooh"  for  Blue', width / 2, 90);
+  
 }
 
 function drawSideCounter(side) {

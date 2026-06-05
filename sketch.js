@@ -4,6 +4,10 @@
 let bg;
 let paperImg;
 
+// Global custom font variables downloaded by user.
+let customStoryFont = null;
+let customButtonFont = null;
+
 // Decorative fireflies for the start screen only. Gameplay fireflies live in Berlin Noise.js.
 let fireflies = [];
 
@@ -16,6 +20,11 @@ let endButtonBounds = { x: 0, y: 0, w: 260, h: 54 };
 function preload() {
   bg = loadImage("background.png");
   paperImg = loadImage("assets/paper.png");
+  
+  // Safely load the custom downloaded local fonts from the assets folder
+  customStoryFont = loadFont("assets/DancingScript-SemiBold.ttf");
+  customButtonFont = loadFont("assets/Luminari-Regular.ttf");
+
   preloadAudioFiles();
   preloadTimeAssets();
   preloadUserInputAssets();
@@ -184,36 +193,75 @@ function drawOldPaperNotice() {
     noTint();
   }
 
-  let bodySize = 13;
-  let smallSize = 14;
-  let textY = paperY - 60; // Shift text block upwards
-  let lineGap = 24;
+  let bodySize = 20;  
+  let smallSize = 22; 
+  let originalLabelSize = 14; 
+  
+  // Custom spacing adjustments: Line gap expanded to 32px for premium layout breathing room
+  let lineGap = 32;   // Increased from 24
+  let textY = paperY - 80; // Shifted up slightly from -60 to center the newly spaced block perfectly
 
   textAlign(CENTER, CENTER);
-  textFont("Dancing Script, cursive"); // Apply Dancing Script for white text
+  
+  // Isolate state changes for the narrative story styling block
+  push();
+  // Apply HTML5 canvas drawing engine filters to create a smooth dark-grey dropshadow
+  drawingContext.shadowColor = color(20, 20, 20, 180);
+  drawingContext.shadowBlur = 5;
+  drawingContext.shadowOffsetX = 2;
+  drawingContext.shadowOffsetY = 2;
+
+  if (customStoryFont) {
+    textFont(customStoryFont);
+  } else {
+    textFont("Dancing Script, cursive");
+  }
+  
   textStyle(NORMAL);
   textSize(bodySize);
   fill(255, 248, 232, 238);
   
+  // Render new story instructions lines wrapped in localized shadow layers
   text("What you see are not ordinary fireflies, but shattered stars fallen from the sky.", paperX, textY);
-  text("They are lost in this mystic forest, waiting for your voice to guide them.", paperX, textY + lineGap);
+  text("They lost in this mystic forest, waiting for your voice guiding.", paperX, textY + lineGap);
 
   textSize(smallSize);
   text("Your mission is to catch two types of fireflies:", paperX, textY + lineGap * 2.3);
+  pop(); // Drop shadow filter context pop ensures no leaking to core identity terms or buttons
 
-  // Keep original readable font for colored text
+  // Keep original highly readable Georgia serif font for colored species labels (No shadow, original size)
   textFont("Georgia, serif"); 
   textStyle(BOLD);
+  textSize(originalLabelSize);
+  
+  // Left Side: Sundrops (Warm-colors Fireflies)
   fill(230, 103, 25);
-  text("Sundrops", paperX - 130, textY + lineGap * 3.2); // Reduced horizontal gap
+  text("Sundrops (Warm-colors Fireflies)", paperX - 170, textY + lineGap * 3.2); 
+  
+  // Right Side: Moonbeams (Cool-colors Fireflies)
   fill(35, 150, 255);
-  text("Moonbeams", paperX + 130, textY + lineGap * 3.2); // Reduced horizontal gap
+  text("Moonbeams (Cool-colors Fireflies)", paperX + 170, textY + lineGap * 3.2); 
 
-  textFont("Dancing Script, cursive"); // Restore Dancing Script
+  // Isolate text layout states again for remaining footers
+  push();
+  drawingContext.shadowColor = color(20, 20, 20, 180);
+  drawingContext.shadowBlur = 5;
+  drawingContext.shadowOffsetX = 2;
+  drawingContext.shadowOffsetY = 2;
+
+  if (customStoryFont) {
+    textFont(customStoryFont);
+  } else {
+    textFont("Dancing Script, cursive");
+  }
   textStyle(NORMAL);
   fill(255, 248, 232, 238);
-  text("You have 120 seconds each round, with surprises along the way.", paperX, textY + lineGap * 4.1);
-  text("Are you ready?", paperX, textY + lineGap * 5); // Removed 'to catch'
+  
+  textSize(bodySize);
+  text("You have 120 seconds each round, and watch out for unexpected surprises along the way!", paperX, textY + lineGap * 4.1);
+  textSize(smallSize);
+  text("Are you ready to catch?", paperX, textY + lineGap * 5); 
+  pop();
 }
 
 // Draw the large magical start button and keep it visually inviting with pulse and float motion.
@@ -238,7 +286,14 @@ function drawStartButton() {
   rect(b.x, b.y + floatY - b.h * 0.18, b.w * 0.9, b.h * 0.28, 16);
 
   textAlign(CENTER, CENTER);
-  textFont("Luminari, Georgia, serif");
+  
+  // Apply downloaded local Luminari font asset for the main button title header
+  if (customButtonFont) {
+    textFont(customButtonFont);
+  } else {
+    textFont("Luminari, Georgia, serif");
+  }
+  
   textStyle(BOLD);
   fill(255, 225, 120);
   fitText("The Star Keeper", b.w * 0.86, 40, 23);
@@ -248,7 +303,7 @@ function drawStartButton() {
   textStyle(NORMAL);
   textSize(constrain(b.h * 0.18, 15, 22));
   fill(232, 246, 255);
-  text("GO!", b.x, b.y + floatY + b.h * 0.26); // Changed to GO!
+  text("GO!", b.x, b.y + floatY + b.h * 0.26); 
 }
 
 // Shared glow renderer used by start-screen and normal gameplay fireflies.

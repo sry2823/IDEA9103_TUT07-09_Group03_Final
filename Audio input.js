@@ -1,38 +1,57 @@
-// Audio system: forest music, voice slowing, silver note, and ECG event.
+// Audio system: forest music, microphone voice control, silver note, and ECG event.
 
+// Background music players and FFT analyzer for reading the current forest track.
 let bgSongs = [];
 let bgSong = null;
 let bgFft = null;
+
+// Microphone input and FFT analyzer for detecting Ooh/Eee vocal sounds.
 let mic = null;
 let micFft = null;
+let micIsReady = false;
+let micLevel = 0;
 let audioStarted = false;
 
+// Music speed is sampled every few seconds and mapped into the normal firefly motion system.
 let baseSpeed = 10;
 let musicSpeed = 10;
 let musicPartDuration = 25;
 let musicPartStartTime = 0;
 let lastMusicReadTime = 0;
 let currentSongIndex = -1;
-let targetBgVolume = 1;
+let targetBgVolume = 0.45;
 
+// Voice control state: Eee freezes the left/orange side, Ooh freezes the right/blue side.
 let oohSlowAmount = 0;
 let eeeSlowAmount = 0;
 let soundSlowStep = 0.35;
 let maxSoundSlow = 9;
-let voiceEnergyThreshold = 32;
+let voiceEnergyThreshold = 22;
+let voiceLevelThreshold = 0.008;
 let voiceSlowDuration = 5000;
-let voiceSlowRampDuration = 500;
-let voiceSlowFactor = 0.22;
+let voiceSlowRampDuration = 80;
+let voiceSlowFactor = 0;
+let voiceOverrideSpeed = 0;
 let leftVoiceSlowStart = -10000;
 let rightVoiceSlowStart = -10000;
 let wasHearingOoh = false;
 let wasHearingEee = false;
+let lastVoiceDebug = "none";
+let voiceNoiseFloor = 0.004;
+let voiceSignalAmount = 0;
+let voiceCalibrationStart = 0;
+let voiceCalibrationDuration = 2200;
+let voiceLevelBoost = 0.014;
+let voiceRatioBoost = 1.9;
 
+// Silver note state. It appears 1-2 times per round and can trigger the ECG event.
 let musicalNoteImg = null;
 let silverNote = null;
-let silverNoteHasAppeared = false;
-let silverNoteSpawnSecond = 30;
+let noteCount = 0;
+let maxNotesThisRound = 0;
+let nextNoteSpawnSecond = 0;
 
+// Beat audio and timing for the ECG wave movement.
 let beatSound = null;
 let beatFft = null;
 let beatEnergy = 0;
@@ -41,7 +60,6 @@ let ecgStartTime = 0;
 let ecgDuration = 15000;
 
 // Load all audio files and image assets used by the audio system.
-
 function preloadAudioFiles() {
   bgSongs[0] = loadSound("assets/assets-midnight-forest.mp3");
   bgSongs[1] = loadSound("assets/assets-magic-forest.mp3");
@@ -68,17 +86,32 @@ function preloadAudioFiles() {
   );
 }
 
-// Start microphone input and begin playing background music.
-
+// Start microphone input and begin playing background music after the user clicks Start.
 function startAudioSystem() {
+  userStartAudio();
+
+  if (getAudioContext().state !== "running") {
+    getAudioContext().resume();
+  }
+
   if (!audioStarted) {
     audioStarted = true;
 
+    // Create the microphone and FFT analyzer immediately, then bind again after permission succeeds.
     mic = new p5.AudioIn();
-    mic.start();
-
-    micFft = new p5.FFT(0.8, 128);
+    micFft = new p5.FFT(0.65, 512);
     micFft.setInput(mic);
+
+    mic.start(
+      function () {
+        micIsReady = true;
+        micFft.setInput(mic);
+        voiceCalibrationStart = millis();
+      },
+      function () {
+        micIsReady = false;
+      }
+    );
   }
 
   if (bgSong === null) {
@@ -86,16 +119,19 @@ function startAudioSystem() {
   }
 }
 
-// Reset audio speed and voice effects for a new round.
-
+// Reset music speed and voice-triggered freeze effects for a new round.
 function resetAudioRound() {
   musicSpeed = baseSpeed;
   oohSlowAmount = 0;
   eeeSlowAmount = 0;
+  micLevel = 0;
   leftVoiceSlowStart = -10000;
   rightVoiceSlowStart = -10000;
   wasHearingOoh = false;
   wasHearingEee = false;
+  lastVoiceDebug = "none";
+  voiceSignalAmount = 0;
+  voiceCalibrationStart = millis();
   lastMusicReadTime = 0;
   musicPartStartTime = 0;
 
@@ -104,8 +140,7 @@ function resetAudioRound() {
   }
 }
 
-// Stop all active audio and clear background music states.
-
+// Stop all active audio when returning to the start screen or ending a round.
 function stopAudioSystem() {
   if (bgSong !== null) {
     bgSong.stop();
@@ -120,30 +155,30 @@ function stopAudioSystem() {
   currentSongIndex = -1;
 }
 
-// Choose and play the next random background music segment.
-
+// Choose and play a random 25-second segment from one of the forest tracks.
 function startNextMusicPart() {
   if (bgSongs.length === 0) {
     return;
   }
 
   let oldSong = bgSong;
-
   if (oldSong !== null) {
-    oldSong.setVolume(0, 0.6);
-    setTimeout(function () {
-      oldSong.stop();
-    }, 700);
+    oldSong.stop();
   }
 
   let nextSongIndex = floor(random(bgSongs.length));
-
   if (nextSongIndex === currentSongIndex && bgSongs.length > 1) {
     nextSongIndex = (nextSongIndex + 1) % bgSongs.length;
   }
 
   currentSongIndex = nextSongIndex;
   bgSong = bgSongs[currentSongIndex];
+
+  if (bgSong === undefined || bgSong === null) {
+    bgSong = null;
+    bgFft = null;
+    return;
+  }
 
   let maxStartTime = max(0, bgSong.duration() - musicPartDuration - 1);
   let randomStartTime = random(maxStartTime);
@@ -158,23 +193,24 @@ function startNextMusicPart() {
   lastMusicReadTime = millis() - 5000;
 }
 
-// Update music switching, music analysis, and voice-based slowing.
-
+// Update music switching, music analysis, and microphone-based freeze effects.
 function updateAudioSystem() {
-  if (!audioStarted || bgSong === null) {
+  if (!audioStarted) {
     return;
   }
 
-  if (millis() - musicPartStartTime > musicPartDuration * 1000) {
-    startNextMusicPart();
-  }
+  updateVoiceFreeze();
 
-  updateMusicSpeed();
-  updateVoiceSlow();
+  if (bgSong !== null) {
+    if (millis() - musicPartStartTime > musicPartDuration * 1000) {
+      startNextMusicPart();
+    }
+
+    updateMusicSpeed();
+  }
 }
 
-// Analyze background music energy to control firefly movement speed.
-
+// Analyze the forest music energy and convert it into the normal firefly speed.
 function updateMusicSpeed() {
   if (bgFft === null) {
     return;
@@ -194,35 +230,84 @@ function updateMusicSpeed() {
   }
 }
 
-// Analyze microphone input to slow fireflies using voice sounds.
-function updateVoiceSlow() {
-  if (micFft === null) {
-    return;
+// Analyze microphone input and freeze the matching side for five seconds.
+function updateVoiceFreeze() {
+  let heardOoh = false;
+  let heardEee = false;
+  let now = millis();
+
+  // Keyboard fallback is only for testing whether the freeze pipeline works.
+  if (keyIsPressed) {
+    if (key === "i" || key === "I") {
+      heardEee = true;
+    }
+    if (key === "o" || key === "O") {
+      heardOoh = true;
+    }
   }
 
-  micFft.analyze();
+  // The microphone and background music use different FFT inputs; this reads only the physical mic.
+  if (mic !== null && micFft !== null && !heardOoh && !heardEee) {
+    micFft.analyze();
 
-  let oohEnergy = micFft.getEnergy(150, 750);
-  let eeeEnergy = micFft.getEnergy(900, 4200);
-  let voiceEnergy = micFft.getEnergy(120, 4200);
-  let now = millis();
-  let heardOoh = voiceEnergy > voiceEnergyThreshold && oohEnergy > 35 && oohEnergy > eeeEnergy * 1.08;
-  let heardEee = voiceEnergy > voiceEnergyThreshold && eeeEnergy > 28 && eeeEnergy > oohEnergy * 0.82;
+    let lowEnergy = micFft.getEnergy(140, 900);
+    let midEnergy = micFft.getEnergy(900, 1600);
+    let highEnergy = micFft.getEnergy(1600, 5200);
+    let voiceEnergy = micFft.getEnergy(140, 5200);
+
+    micLevel = mic.getLevel();
+
+    // Calibrate the room sound first. This includes any background music leaking from speakers.
+    let isCalibrating = millis() - voiceCalibrationStart < voiceCalibrationDuration;
+    let levelAboveFloor = micLevel - voiceNoiseFloor;
+    let levelRatio = micLevel / max(voiceNoiseFloor, 0.001);
+    let hasVoice =
+      !isCalibrating &&
+      micLevel > voiceLevelThreshold &&
+      levelAboveFloor > voiceLevelBoost &&
+      levelRatio > voiceRatioBoost &&
+      voiceEnergy > voiceEnergyThreshold;
+
+    if (!hasVoice) {
+      updateVoiceNoiseFloor(micLevel);
+      voiceSignalAmount = max(0, voiceSignalAmount - 1);
+    } else {
+      // Ooh is a darker sound, so check the low/high balance before checking Eee brightness.
+      let highToLow = highEnergy / max(lowEnergy, 1);
+      let lowRatio = lowEnergy / max(voiceEnergy, 1);
+      let highRatio = highEnergy / max(voiceEnergy, 1);
+      let oohCandidate = lowEnergy > 18 && (highToLow < 0.72 || (lowRatio > 0.5 && highRatio < 0.28));
+      let eeeCandidate = highEnergy > 14 && (highToLow >= 0.72 || highRatio >= 0.24);
+
+      if (oohCandidate) {
+        heardOoh = true;
+      } else if (eeeCandidate) {
+        heardEee = true;
+      } else if (highToLow < 0.8) {
+        heardOoh = true;
+      } else {
+        heardEee = true;
+      }
+
+      voiceSignalAmount = max(micLevel * 1000, voiceEnergy);
+    }
+  }
+
+  // Reduce music while voice control is active so speaker sound is less likely to leak into the mic.
+  updateVoiceMusicDucking(heardOoh || heardEee);
 
   if (heardOoh) {
-    if (!wasHearingOoh) {
-      rightVoiceSlowStart = now;
-    }
+    triggerVoiceFreeze("right", now);
     oohSlowAmount = maxSoundSlow;
+    lastVoiceDebug = "Ooh freezes right";
   } else {
     oohSlowAmount = max(oohSlowAmount - soundSlowStep * 0.65, 0);
   }
 
   if (heardEee) {
-    if (!wasHearingEee) {
-      leftVoiceSlowStart = now;
-    }
+    triggerVoiceFreeze("left", now);
     eeeSlowAmount = maxSoundSlow;
+    lastVoiceDebug = "Eee freezes left";
   } else {
     eeeSlowAmount = max(eeeSlowAmount - soundSlowStep * 0.65, 0);
   }
@@ -231,71 +316,114 @@ function updateVoiceSlow() {
   wasHearingEee = heardEee;
 }
 
-// Calculate the current movement speed for a specific firefly.
-function getFireflySpeed(firefly) {
-  let normalSpeed = constrain(musicSpeed, 3, 20);
-  let slowScale = getSideSlowSpeedScale(firefly.side);
-  return constrain(normalSpeed * slowScale, 0.8, 20);
+// Slowly learn the current non-player sound level so background music is treated as ambience.
+function updateVoiceNoiseFloor(level) {
+  let riseRate = millis() - voiceCalibrationStart < voiceCalibrationDuration ? 0.14 : 0.035;
+  let fallRate = 0.006;
+
+  if (level > voiceNoiseFloor) {
+    voiceNoiseFloor = lerp(voiceNoiseFloor, level, riseRate);
+  } else {
+    voiceNoiseFloor = lerp(voiceNoiseFloor, level, fallRate);
+  }
+
+  voiceNoiseFloor = constrain(voiceNoiseFloor, 0.002, 0.08);
 }
 
-// Convert firefly movement speed into a scale value.
+// Lower background music when the mic hears the player or while a side is frozen.
+function updateVoiceMusicDucking(voiceNow) {
+  if (bgSong === null || ecgEventActive) {
+    return;
+  }
+
+  let freezeActive = isSideVoiceSlowActive("left") || isSideVoiceSlowActive("right");
+
+  if (voiceNow || freezeActive) {
+    bgSong.setVolume(0.08, 0.08);
+  } else {
+    bgSong.setVolume(targetBgVolume, 0.4);
+  }
+}
+
+// Start the five-second full freeze window for one side.
+function triggerVoiceFreeze(side, startTime) {
+  if (side === "left") {
+    leftVoiceSlowStart = startTime;
+  }
+
+  if (side === "right") {
+    rightVoiceSlowStart = startTime;
+  }
+}
+
+// Backward-compatible wrapper for older code that still calls triggerVoiceSlow().
+function triggerVoiceSlow(side, startTime) {
+  triggerVoiceFreeze(side, startTime);
+}
+
+// Calculate current speed for code paths that use speed instead of movement scale.
+function getFireflySpeed(firefly) {
+  if (isSideVoiceSlowActive(firefly.side)) {
+    return voiceOverrideSpeed;
+  }
+
+  return constrain(musicSpeed, 3, 20);
+}
+
+// Convert the speed number into a scale used by some movement code versions.
 function getFireflySpeedScale(firefly) {
   return getFireflySpeed(firefly) / baseSpeed;
 }
 
+// Return the start time of the freeze effect for the requested side.
 function getSideVoiceSlowStart(side) {
   if (side === "left") {
     return leftVoiceSlowStart;
   }
 
-  if (side === "right") {
-    return rightVoiceSlowStart;
-  }
-
-  return -10000;
+  return rightVoiceSlowStart;
 }
 
+// A side remains controlled for five seconds after the matching voice is detected.
 function isSideVoiceSlowActive(side) {
   return millis() - getSideVoiceSlowStart(side) < voiceSlowDuration;
 }
 
-function getSideSlowSpeedScale(side) {
-  let age = millis() - getSideVoiceSlowStart(side);
-
-  if (age < 0 || age > voiceSlowDuration) {
+// Return 1 when the side is frozen and 0 when it is free.
+function getSideSlowProgress(side) {
+  if (isSideVoiceSlowActive(side)) {
     return 1;
   }
 
-  let slowProgress = constrain(age / voiceSlowRampDuration, 0, 1);
-  return lerp(1, voiceSlowFactor, slowProgress);
+  return 0;
 }
 
+// Berlin Noise.js multiplies normal firefly movement by this scale.
+function getSideSlowSpeedScale(side) {
+  if (isSideVoiceSlowActive(side)) {
+    return voiceSlowFactor;
+  }
+
+  return 1;
+}
+
+// Voice is not a capture requirement in this version; it only makes normal fireflies easier to catch.
 function canStartCaptureDuringSideSlow(kind, target) {
-  if (kind === "note") {
-    return isSideVoiceSlowActive("left") || isSideVoiceSlowActive("right");
-  }
-
-  if (target !== null && target.side !== undefined) {
-    return isSideVoiceSlowActive(target.side);
-  }
-
-  return false;
+  return true;
 }
 
-
-// Reset the special silver note and ECG event for a new round.
-
+// Reset the silver note and ECG event for a fresh round.
 function startSpecialNoteRound() {
   silverNote = null;
-  silverNoteHasAppeared = false;
-  silverNoteSpawnSecond = floor(random(20, 91));
+  noteCount = 0;
+  maxNotesThisRound = floor(random(1, 3));
+  nextNoteSpawnSecond = floor(random(15, 25));
   ecgEventActive = false;
   ecgStartTime = 0;
   beatEnergy = 0;
 }
 
-// Update silver note spawning, movement, and ECG event status.
-
+// Update the silver note spawn schedule, note movement, and ECG event status.
 function updateSpecialNoteSystem() {
   if (gameState !== "playing") {
     return;
@@ -303,97 +431,91 @@ function updateSpecialNoteSystem() {
 
   updateEcgEvent();
 
-  if (!silverNoteHasAppeared && silverNote === null) {
+  if (noteCount < maxNotesThisRound && silverNote === null) {
     let elapsed = floor((millis() - roundStartTime) / 1000);
 
-    if (elapsed >= silverNoteSpawnSecond && roundTimeLeft > 10 && !hasSpecialNoteConflict()) {
+    if (elapsed >= nextNoteSpawnSecond && roundTimeLeft > 10 && !hasSpecialNoteConflict()) {
       createSilverNote();
+      noteCount++;
+      nextNoteSpawnSecond = elapsed + floor(random(30, 45));
     }
   }
 
   if (silverNote !== null && activeCapture === null) {
     moveSilverNote();
+
+    if (millis() - silverNote.spawnTime > 10000) {
+      silverNote = null;
+    }
   }
 }
 
-// Check whether another special event blocks the silver note.
-
+// Prevent silver note from appearing during red firefly, frozen side, QTE, ECG, or post-ECG cooldown.
 function hasSpecialNoteConflict() {
-  return redFirefly !== null || freezeSide !== null || activeCapture !== null || ecgEventActive;
+  let cooldownActive = typeof postEcgCooldown !== "undefined" ? postEcgCooldown > 0 : false;
+  return redFirefly !== null || freezeSide !== null || activeCapture !== null || ecgEventActive || cooldownActive;
 }
 
-// Create a silver note at a random playable position.
-
+// Create a silver note at a clear random playable position.
 function createSilverNote() {
-  silverNote = {
-    x: random(55, width - 55),
-    y: random(topUIHeight + 55, height - 55),
-    size: 34,
-    vx: random(-0.8, 0.8),
-    vy: random(-0.8, 0.8),
-    noiseSeedX: random(1000),
-    noiseSeedY: random(1000),
-    noiseSpeed: random(0.004, 0.008)
-  };
+  let position = getClearRandomPosition(
+    {
+      minX: 30,
+      maxX: width - 30,
+      minY: topUIHeight + 55,
+      maxY: height - 55
+    },
+    105,
+    90
+  );
 
-  silverNoteHasAppeared = true;
+  silverNote = {
+    x: position.x,
+    y: position.y,
+    size: 48,
+    vx: (random(1) < 0.5 ? -1 : 1) * random(3, 4),
+    vy: random(-1, 1),
+    waveOffset: random(TWO_PI),
+    spawnTime: millis()
+  };
 }
 
-// Move the silver note using smooth noise-based motion.
-
+// Move the silver note with a horizontal glide and a gentle vertical wave.
 function moveSilverNote() {
-  let time = frameCount * silverNote.noiseSpeed;
-  let nx = noise(silverNote.noiseSeedX, time);
-  let ny = noise(silverNote.noiseSeedY, time);
-  let targetVX = map(nx, 0, 1, -1.2, 1.2);
-  let targetVY = map(ny, 0, 1, -1.2, 1.2);
-
-  silverNote.vx = lerp(silverNote.vx, targetVX, 0.04);
-  silverNote.vy = lerp(silverNote.vy, targetVY, 0.04);
   silverNote.x += silverNote.vx;
-  silverNote.y += silverNote.vy;
+  silverNote.y += sin(frameCount * 0.16 + silverNote.waveOffset) * 2.1 + silverNote.vy;
+  pushAwayFromOtherObjects(silverNote, 86, 0.65);
 
-  if (silverNote.x < 45 || silverNote.x > width - 45) {
+  if (silverNote.x < 24 || silverNote.x > width - 24) {
     silverNote.vx *= -1;
-    silverNote.noiseSeedX += random(50);
   }
 
   if (silverNote.y < topUIHeight + 35 || silverNote.y > height - 45) {
     silverNote.vy *= -1;
-    silverNote.noiseSeedY += random(50);
   }
 
-  silverNote.x = constrain(silverNote.x, 45, width - 45);
+  silverNote.x = constrain(silverNote.x, 24, width - 24);
   silverNote.y = constrain(silverNote.y, topUIHeight + 35, height - 45);
 }
 
-// Draw the glowing silver note on the screen.
-
+// Draw the silver note image, with a fallback if the asset is missing.
 function drawSilverNote() {
   if (silverNote === null || gameState !== "playing") {
     return;
   }
 
-  let pulse = 0.5 + 0.5 * sin(frameCount * 0.08);
-  blendMode(ADD);
-  noStroke();
-  fill(220, 230, 255, 70 + pulse * 70);
-  circle(silverNote.x, silverNote.y, silverNote.size * 2.25);
-  fill(255, 255, 255, 60);
-  circle(silverNote.x, silverNote.y, silverNote.size * 1.25);
-  blendMode(BLEND);
-
   if (musicalNoteImg) {
+    tint(238, 240, 255, 245);
     imageMode(CENTER);
     image(musicalNoteImg, silverNote.x, silverNote.y, silverNote.size, silverNote.size);
     imageMode(CORNER);
+    noTint();
   } else {
     drawFallbackMusicNote(silverNote.x, silverNote.y, silverNote.size);
   }
 }
 
-// Draw a simple music note when the image asset is unavailable.
-
+// Fallback note drawing if musical note.png is missing.
 function drawFallbackMusicNote(x, y, s) {
   stroke(232, 238, 255);
   strokeWeight(3);
@@ -404,34 +526,57 @@ function drawFallbackMusicNote(x, y, s) {
   ellipse(x - s * 0.12, y + s * 0.25, s * 0.38, s * 0.25);
 }
 
-// Trigger the ECG event after the silver note is captured.
-
+// Trigger the ECG event after a successful silver-note QTE.
 function catchSilverNoteSuccess(x, y) {
   silverNote = null;
   startEcgEvent(x, y);
 }
 
 // Remove the silver note after a failed capture attempt.
-
 function failSilverNoteQTE() {
   silverNote = null;
 }
 
-// Start the ECG event and move fireflies toward exit paths.
-
+// Start the ECG event, lower forest music volume, and launch the beat track.
 function startEcgEvent(noteX, noteY) {
   ecgEventActive = true;
   ecgStartTime = millis();
   beatEnergy = 0;
+
+  let leftTotal = 0;
+  let rightTotal = 0;
+
+  for (let f of gameFireflies) {
+    if (f.visible === true && f.caught === false) {
+      if (f.side === "left") {
+        leftTotal++;
+      } else {
+        rightTotal++;
+      }
+    }
+  }
+
+  let leftIndex = 0;
+  let rightIndex = 0;
 
   for (let f of gameFireflies) {
     if (f.visible === true && f.caught === false) {
       f.ecgStartX = f.x;
       f.ecgStartY = f.y;
 
-      let exit = getNearestExitPoint(f.x, f.y);
-      f.ecgExitX = exit.x;
-      f.ecgExitY = exit.y;
+      if (f.side === "left") {
+        f.ecgExitX = -100;
+        f.ecgExitY = height / 2;
+        let spacing = leftTotal > 1 ? leftIndex / (leftTotal - 1) : 0.5;
+        f.ecgTargetX = map(spacing, 0, 1, width * 0.06, width * 0.46);
+        leftIndex++;
+      } else {
+        f.ecgExitX = width + 100;
+        f.ecgExitY = height / 2;
+        let spacing = rightTotal > 1 ? rightIndex / (rightTotal - 1) : 0.5;
+        f.ecgTargetX = map(spacing, 0, 1, width * 0.54, width * 0.94);
+        rightIndex++;
+      }
     }
   }
 
@@ -449,29 +594,7 @@ function startEcgEvent(noteX, noteY) {
   }
 }
 
-// Find the closest off-screen exit point for a firefly.
-
-function getNearestExitPoint(x, y) {
-  let leftD = x;
-  let rightD = width - x;
-  let topD = y;
-  let bottomD = height - y;
-  let smallest = min(leftD, rightD, topD, bottomD);
-
-  if (smallest === leftD) {
-    return { x: -80, y: y };
-  }
-  if (smallest === rightD) {
-    return { x: width + 80, y: y };
-  }
-  if (smallest === topD) {
-    return { x: x, y: -80 };
-  }
-  return { x: x, y: height + 80 };
-}
-
-// Update ECG beat energy and end the event when time is over.
-
+// Update ECG beat energy and end the event when its duration is over.
 function updateEcgEvent() {
   if (!ecgEventActive) {
     return;
@@ -487,46 +610,50 @@ function updateEcgEvent() {
   }
 }
 
-// Move fireflies into ECG-style wave patterns during the event.
-
-function updateEcgFirefly(f, index) {
+// Move normal fireflies out, then back in with beat-driven ECG-style waves.
+function updateEcgFirefly(f) {
   let age = millis() - ecgStartTime;
 
-  if (age < 2000) {
-    let p = constrain(age / 2000, 0, 1);
-    f.x = lerp(f.ecgStartX, f.ecgExitX, p);
-    f.y = lerp(f.ecgStartY, f.ecgExitY, p);
+  if (age < 1500) {
+    let p = constrain(age / 1500, 0, 1);
+    f.x = lerp(f.ecgStartX, f.ecgExitX, p * p);
+    f.y = lerp(f.ecgStartY, f.ecgExitY, p * p);
     return;
   }
 
-  let p = constrain((age - 2000) / (ecgDuration - 2000), 0, 1);
-  let sideIndex = index % 20;
-  let lane = sideIndex - 9.5;
-  let waveHeight = 22 + beatEnergy * 0.18;
-  let wave = sin(p * TWO_PI * 5 + index * 0.7) * waveHeight;
-  let y = height / 2 + lane * 12 + wave;
-
-  if (f.side === "left") {
-    f.x = lerp(-80, width / 2 - 58, p);
-  } else {
-    f.x = lerp(width + 80, width / 2 + 58, p);
+  if (age < 2000) {
+    f.x = f.ecgExitX;
+    f.y = f.ecgExitY;
+    return;
   }
 
-  f.y = constrain(y, topUIHeight + 35, height - 35);
+  let returnP = constrain((age - 2000) / 2000, 0, 1);
+  let easeOut = 1 - Math.pow(1 - returnP, 3);
+  let waveFreq = 0.012;
+  let timeScroll = frameCount * 0.08;
+  let dir = f.side === "left" ? -1 : 1;
+  let baseAmplitude = map(beatEnergy, 0, 255, 15, 210);
+  let unevenFactor = 0.65 + 0.35 * sin(f.ecgTargetX * 0.025);
+  let phase = f.ecgTargetX * waveFreq + timeScroll * dir;
+  let waveY = sin(phase) * baseAmplitude * unevenFactor;
+  let targetY = height / 2 + waveY;
+
+  f.x = lerp(f.ecgExitX, f.ecgTargetX, easeOut);
+  f.y = lerp(f.ecgExitY, targetY, easeOut);
+  f.y = constrain(f.y, topUIHeight + 35, height - 35);
 }
 
-// End the ECG event and restore normal music and firefly movement.
-
+// End ECG mode and restore normal music volume and normal firefly movement.
 function endEcgEvent() {
   ecgEventActive = false;
-  targetBgVolume = 1;
+  targetBgVolume = 0.45;
 
   if (beatSound !== null) {
     beatSound.stop();
   }
 
   if (bgSong !== null) {
-    bgSong.setVolume(1, 1);
+    bgSong.setVolume(targetBgVolume, 1);
   }
 
   for (let f of gameFireflies) {
@@ -534,12 +661,12 @@ function endEcgEvent() {
     delete f.ecgStartY;
     delete f.ecgExitX;
     delete f.ecgExitY;
+    delete f.ecgTargetX;
     keepFireflyInBounds(f);
   }
 }
 
-// Stop the ECG beat event and reset the background volume target.
-
+// Stop ECG audio immediately when a round ends or the player restarts.
 function stopBeatEvent() {
   ecgEventActive = false;
 
@@ -547,5 +674,5 @@ function stopBeatEvent() {
     beatSound.stop();
   }
 
-  targetBgVolume = 1;
+  targetBgVolume = 0.45;
 }
