@@ -1,28 +1,42 @@
+// Time-based events: global countdown, red firefly, frozen side, and disappearance effects.
+
+// Main round countdown values.
 let gameTime = 120;
 let roundStartTime = 0;
 let roundTimeLeft = 120;
 let lastTimeTick = 0;
 
+// Red firefly state. Only one red firefly can exist at a time.
 let redFirefly = null;
 let redTimer = 0;
 let redLifeTimer = 0;
 let redInterval = 15000;
 let redLifeDuration = 20000;
 
+// Frozen-side event state.
 let freezeSide = null;
+let lastFreezeSide = null; 
 let freezeTimer = 0;
 let freezeLifeTimer = 0;
-let freezeInterval = 30000;
-let freezeDuration = 5000;
+let freezeInterval = 20000;
+let freezeDuration = 10000;
+let freezeCount = 0;
+let maxFreezeThisRound = 0;
 let frozenImg = null;
+let starImg = null;
 
+// Random disappearance event state and star-image burst effects.
 let disappearTimer = 0;
-let disappearInterval = 15000;
+let disappearInterval = 10000;
 let disappearedFireflies = [];
 
+// Cooldown timer to prevent red firefly, freeze, or note events immediately after ECG finishes.
+let postEcgCooldown = 0;
+
+// Load time-event image assets once before the game starts.
 function preloadTimeAssets() {
   frozenImg = loadImage(
-    "frozen.png",
+    "assets/frozen.png",
     function (img) {
       frozenImg = img;
     },
@@ -30,9 +44,19 @@ function preloadTimeAssets() {
       frozenImg = null;
     }
   );
+
+  starImg = loadImage(
+    "assets/star.png",
+    function (img) {
+      starImg = img;
+    },
+    function () {
+      starImg = null;
+    }
+  );
 }
 
-
+// Reset all time-based events at the beginning of each round.
 function startTimeSystem() {
   gameTime = 120;
   roundStartTime = millis();
@@ -44,15 +68,22 @@ function startTimeSystem() {
   redLifeTimer = 0;
 
   freezeSide = null;
+  lastFreezeSide = null;
   freezeTimer = 0;
   freezeLifeTimer = 0;
+  freezeCount = 0;
+  maxFreezeThisRound = floor(random(1, 4)); // Will be 1, 2, or 3
+  freezeInterval = random(15000, 25000); // Random initial wait time
 
   disappearTimer = 0;
   disappearedFireflies = [];
+  
+  postEcgCooldown = 0;
 }
 
+// Update the countdown and all time-triggered events.
 function timeSystem() {
-   if (gameState !== "playing") {
+  if (gameState !== "playing") {
     return;
   }
 
@@ -60,8 +91,7 @@ function timeSystem() {
   let dt = now - lastTimeTick;
   lastTimeTick = now;
 
- let elapsedSeconds = floor((now - roundStartTime) / 1000);
-  roundTimeLeft = max(0, gameTime - elapsedSeconds);
+  roundTimeLeft = max(0, gameTime - floor((now - roundStartTime) / 1000));
 
   if (roundTimeLeft <= 0) {
     if (leftCaptured >= leftTarget && rightCaptured >= rightTarget) {
@@ -72,24 +102,38 @@ function timeSystem() {
     return;
   }
 
+  // Lock the cooldown at 6 seconds while the ECG event is running.
+  // Once the ECG event stops, count down to 0 before allowing new events.
+  if (ecgEventActive) {
+    postEcgCooldown = 6000;
+  } else if (postEcgCooldown > 0) {
+    postEcgCooldown -= dt;
+  }
+
+  updateRedFireflyLife(dt);
+
   if (!areTimedEventsPaused()) {
-    updateRedFireflyLife(dt);
     updateDisappearTimer(dt);
     updateRedTimer(dt);
     updateFreezeTimer(dt);
-    updateFreezeLife(dt);
   }
+
+  updateFreezeLife(dt);
 }
 
+// QTE and ECG temporarily pause special-event schedulers, but the main countdown keeps running.
 function areTimedEventsPaused() {
-  return activeCapture !== null || silverNote !== null || ecgEventActive;
+  return activeCapture !== null || ecgEventActive;
 }
 
+// Spawn a red firefly every 15 seconds when allowed.
 function updateRedTimer(dt) {
-  if (redFirefly !== null || freezeSide !== null) {
+  // Pause the timer if ANY other special event is active, or if we are in the 6s ECG cooldown.
+  if (redFirefly !== null || freezeSide !== null || silverNote !== null || postEcgCooldown > 0) {
     return;
   }
-redTimer += dt;
+
+  redTimer += dt;
 
   if (redTimer >= redInterval) {
     createRedFirefly();
@@ -97,6 +141,7 @@ redTimer += dt;
   }
 }
 
+// Create a red firefly at a clear position so it does not overlap normal fireflies or the note.
 function createRedFirefly() {
   let bounds = {
     minX: 35,
@@ -104,32 +149,34 @@ function createRedFirefly() {
     minY: topUIHeight + 35,
     maxY: height - 35
   };
+  let position = getClearRandomPosition(bounds, 105, 90);
 
   redFirefly = {
-    side: random(["left", "right"]),
+    side: position.x < width / 2 ? "left" : "right",
     type: "red",
     visible: true,
     caught: false,
-    x: random(bounds.minX, bounds.maxX),
-    y: random(bounds.minY, bounds.maxY),
+    x: position.x,
+    y: position.y,
     minX: bounds.minX,
     maxX: bounds.maxX,
     minY: bounds.minY,
     maxY: bounds.maxY,
-    coreSize: 8,
-    maxGlow: 78,
-    breatheSpeed: 0.007,
+    coreSize: 10,
+    maxGlow: 118,
+    breatheSpeed: 0.045,
     breatheOffset: random(1),
     noiseSeedX: random(1000),
     noiseSeedY: random(1000),
-    noiseSpeed: random(0.007, 0.012),
-    vx: random(-2, 2),
-    vy: random(-2, 2)
+    noiseSpeed: random(0.014, 0.022),
+    vx: random(-3.5, 3.5),
+    vy: random(-3.5, 3.5)
   };
 
   redLifeTimer = 0;
 }
 
+// Red firefly lasts 20 seconds unless caught; QTE pauses only the red firefly's life timer.
 function updateRedFireflyLife(dt) {
   if (redFirefly === null) {
     return;
@@ -146,6 +193,7 @@ function updateRedFireflyLife(dt) {
   }
 }
 
+// Draw the red firefly with a separate flash style so it reads differently from normal fireflies.
 function drawRedFirefly() {
   if (redFirefly === null || gameState !== "playing") {
     return;
@@ -156,34 +204,39 @@ function drawRedFirefly() {
   }
 
   blendMode(ADD);
-  drawBreathingLight(
-    redFirefly.x,
-    redFirefly.y,
-    redFirefly.coreSize,
-    redFirefly.maxGlow,
-    redFirefly.breatheSpeed,
-    redFirefly.breatheOffset,
-    color(255, 25, 25),
-    color(255, 80, 60),
-    color(255, 230, 210),
-    1
-  );
+  drawRedFlashFirefly(redFirefly.x, redFirefly.y);
   blendMode(BLEND);
 }
 
+// High-frequency red flash effect for urgent visibility.
+function drawRedFlashFirefly(x, y) {
+  let flash = 0.5 + 0.5 * sin(frameCount * 0.95);
+  let snap = 0.5 + 0.5 * sin(frameCount * 1.9);
+  noStroke();
+  fill(255, 0, 0, 55 + flash * 115);
+  circle(x, y, 44 + flash * 24);
+  fill(255, 35, 0, 95 + snap * 120);
+  circle(x, y, 22 + snap * 12);
+  fill(255, 0, 0, 240);
+  circle(x, y, 13);
+  fill(255, 245, 220, 230);
+  circle(x, y, 5 + flash * 3);
+}
+
+// Move the red firefly faster than normal fireflies, while still respecting voice slow effects.
 function moveRedFirefly() {
   let time = frameCount * redFirefly.noiseSpeed;
   let nx = noise(redFirefly.noiseSeedX, time);
   let ny = noise(redFirefly.noiseSeedY, time);
   let slowScale = getSideSlowSpeedScale(redFirefly.side);
-  let targetVX = map(nx, 0, 1, -2.8, 2.8) * slowScale;
-  let targetVY = map(ny, 0, 1, -2.8, 2.8) * slowScale;
-
+  let targetVX = map(nx, 0, 1, -4.8, 4.8) * slowScale;
+  let targetVY = map(ny, 0, 1, -4.8, 4.8) * slowScale;
 
   redFirefly.vx = lerp(redFirefly.vx, targetVX, 0.05);
   redFirefly.vy = lerp(redFirefly.vy, targetVY, 0.05);
   redFirefly.x += redFirefly.vx;
   redFirefly.y += redFirefly.vy;
+  pushAwayFromOtherObjects(redFirefly, 90, 2.2);
 
   if (redFirefly.x < redFirefly.minX || redFirefly.x > redFirefly.maxX) {
     redFirefly.vx *= -1;
@@ -200,6 +253,7 @@ function moveRedFirefly() {
   redFirefly.side = redFirefly.x < width / 2 ? "left" : "right";
 }
 
+// Catching the red firefly rewards extra time.
 function catchRedFirefly() {
   if (redFirefly !== null) {
     gameTime += 5;
@@ -207,6 +261,7 @@ function catchRedFirefly() {
   }
 }
 
+// Remove the red firefly and restart its spawn timer from this moment.
 function makeRedFireflyDisappear() {
   if (redFirefly !== null) {
     addDisappearEffect(redFirefly.x, redFirefly.y, "red");
@@ -217,26 +272,45 @@ function makeRedFireflyDisappear() {
   redTimer = 0;
 }
 
+// Start a frozen-side event on its own timer when no conflicting event exists.
 function updateFreezeTimer(dt) {
-  if (freezeSide !== null || redFirefly !== null) {
+  // Pause the timer if ANY other special event is active, or if we are in the 6s ECG cooldown.
+  if (freezeSide !== null || redFirefly !== null || silverNote !== null || postEcgCooldown > 0) {
+    return;
+  }
+
+  // Stop spawning if we have reached the maximum allowed freezes for this round.
+  if (freezeCount >= maxFreezeThisRound) {
     return;
   }
 
   freezeTimer += dt;
 
   if (freezeTimer >= freezeInterval) {
-    freezeSide = random(["left", "right"]);
+    // Alternate sides: if left was frozen last, freeze right, and vice versa.
+    if (lastFreezeSide === "left") {
+      freezeSide = "right";
+    } else if (lastFreezeSide === "right") {
+      freezeSide = "left";
+    } else {
+      freezeSide = random() < 0.5 ? "left" : "right";
+    }
+
+    lastFreezeSide = freezeSide;
+    freezeCount++;
     freezeLifeTimer = 0;
     freezeTimer = 0;
+    freezeInterval = random(25000, 35000); // Wait time for the next potential freeze
   }
 }
 
+// Keep the frozen image on screen for the specified duration.
 function updateFreezeLife(dt) {
   if (freezeSide === null) {
     return;
   }
 
-  if (activeCapture !== null || ecgEventActive || silverNote !== null) {
+  if (activeCapture !== null || ecgEventActive) {
     return;
   }
 
@@ -248,94 +322,28 @@ function updateFreezeLife(dt) {
   }
 }
 
-
-function randomlyDisappearOneFirefly() {
-  let visibleFireflies = [];
-
-  for (let f of gameFireflies) {
-    if (f.visible !== false && f.caught !== true && f.type !== "gold") {
-      visibleFireflies.push(f);
-    }
-  }
-
-  if (visibleFireflies.length > 0) {
-    let randomFirefly = random(visibleFireflies);
-
-    randomFirefly.visible = false;
-
-    disappearedFireflies.push({
-      x: randomFirefly.x,
-      y: randomFirefly.y,
-      startTime: millis(),
-      side: randomFirefly.side
-    });
-  }
-}
-
-function updateFreezeLife(dt) {
-  if (freezeSide === null) {
-    return;
-  }
-
-  if (activeCapture !== null || ecgEventActive || silverNote !== null) {
-    return;
-  }
-
-  freezeLifeTimer += dt;
-
-  if (freezeLifeTimer >= freezeDuration) {
-    freezeSide = null;
-    freezeLifeTimer = 0;
-  }
-}
-
-function updateFreezeLife(dt) {
-  if (freezeSide === null) {
-    return;
-  }
-
-  if (activeCapture !== null || ecgEventActive || silverNote !== null) {
-    return;
-  }
-
-  freezeLifeTimer += dt;
-
-  if (freezeLifeTimer >= freezeDuration) {
-    freezeSide = null;
-    freezeLifeTimer = 0;
-  }
-}
-
+// Draw the frozen.png asset perfectly stretched over exactly half the screen.
 function drawFrozenSide() {
   if (freezeSide === null || gameState !== "playing") {
     return;
   }
 
-  let x = freezeSide === "left" ? 0 : width / 2;
-  let w = width / 2;
-  rectMode(CORNER);
+  let stretchW = width / 2;
+  let stretchH = height;
+  let startX = freezeSide === "left" ? 0 : stretchW;
 
   if (frozenImg) {
-    tint(255, 135);
-    image(frozenImg, x, 0, w, height);
+    push(); // Forcefully isolate rendering settings to prevent bleed-over
+    tint(255, 102); 
+    imageMode(CORNER); 
+    // Draw the image exactly matching half width and full height of the canvas
+    image(frozenImg, startX, 0, stretchW, stretchH); 
     noTint();
+    pop();
   }
-
-  noStroke();
-  fill(175, 225, 255, 70);
-  rect(x, 0, w, height);
-  fill(235, 250, 255, 35);
-  rect(x + 15, 15, w - 30, height - 30);
-
-  stroke(230, 250, 255, 100);
-  strokeWeight(2);
-  for (let i = 0; i < 12; i++) {
-    let lineX = x + random(w);
-    line(lineX, 0, lineX + random(-70, 70), height);
-  }
-  noStroke();
 }
 
+// Check whether a screen point lies inside the currently frozen half.
 function isPointInFrozenSide(px, py) {
   if (freezeSide === null) {
     return false;
@@ -348,6 +356,7 @@ function isPointInFrozenSide(px, py) {
   return px >= width / 2;
 }
 
+// Fireflies on the frozen side stop moving and cannot be clicked.
 function isFireflyFrozen(firefly) {
   if (freezeSide === "left" && firefly.side === "left") {
     return true;
@@ -360,6 +369,7 @@ function isFireflyFrozen(firefly) {
   return false;
 }
 
+// Trigger the random disappearance event on its own timer when possible.
 function updateDisappearTimer(dt) {
   disappearTimer += dt;
 
@@ -369,6 +379,7 @@ function updateDisappearTimer(dt) {
   }
 }
 
+// Remove one eligible normal firefly without making the mission impossible.
 function randomlyDisappearOneFirefly() {
   let choices = [];
 
@@ -387,6 +398,7 @@ function randomlyDisappearOneFirefly() {
   addDisappearEffect(selected.x, selected.y, selected.side);
 }
 
+// Prevent disappearance from removing too many fireflies from a side that still needs them.
 function canAutoRemoveSide(side) {
   let visibleCount = 0;
   let neededCount = side === "left" ? leftTarget - leftCaptured : rightTarget - rightCaptured;
@@ -400,6 +412,7 @@ function canAutoRemoveSide(side) {
   return visibleCount > neededCount;
 }
 
+// Store a disappearing-star effect at the removed firefly's position.
 function addDisappearEffect(x, y, side) {
   disappearedFireflies.push({
     x: x,
@@ -409,39 +422,45 @@ function addDisappearEffect(x, y, side) {
   });
 }
 
+// Draw a large star.png image that flickers rapidly before disappearing.
 function drawDisappearEffects() {
   for (let i = disappearedFireflies.length - 1; i >= 0; i--) {
     let effect = disappearedFireflies[i];
     let age = millis() - effect.startTime;
+    let flashDuration = 70;
+    let flashGap = 35;
+    let flashCount = 6;
+    let totalDuration = flashDuration * flashCount + flashGap * (flashCount - 1);
 
-    if (age > 950) {
+    if (age > totalDuration) {
       disappearedFireflies.splice(i, 1);
       continue;
     }
 
-    let alpha = map(age, 0, 950, 230, 0);
-    let baseSize = map(age, 0, 950, 12, 82);
+    if (starImg) {
+      let cycle = flashDuration + flashGap;
+      let flashIndex = floor(age / cycle);
+      let localAge = age - flashIndex * cycle;
 
-    blendMode(ADD);
-    drawCrossStar(effect.x - baseSize * 0.28, effect.y, baseSize * 0.55, alpha);
-    drawCrossStar(effect.x + baseSize * 0.24, effect.y - baseSize * 0.18, baseSize * 0.35, alpha);
-    drawCrossStar(effect.x + baseSize * 0.1, effect.y + baseSize * 0.25, baseSize * 0.45, alpha);
-    blendMode(BLEND);
+      if (flashIndex < flashCount && localAge < flashDuration) {
+        let pulse = sin(map(localAge, 0, flashDuration, 0, PI));
+        let alpha = map(pulse, 0, 1, 90, 255);
+        let baseSize = 92 + pulse * 62;
+
+        tint(255, alpha);
+        imageMode(CENTER);
+        image(starImg, effect.x, effect.y, baseSize, baseSize);
+        imageMode(CORNER);
+        noTint();
+      }
+    }
   }
 }
 
-function drawCrossStar(x, y, s, alpha) {
-  stroke(255, 255, 245, alpha);
-  strokeWeight(2);
-  line(x - s, y, x + s, y);
-  line(x, y - s, x, y + s);
-  noStroke();
-  fill(255, 255, 245, alpha * 0.65);
-  circle(x, y, s * 0.7);
-}
-
+// Clear all round-only time effects when leaving the game scene.
 function clearRoundTimeEvents() {
   redFirefly = null;
   freezeSide = null;
+  lastFreezeSide = null;
   disappearedFireflies = [];
 }

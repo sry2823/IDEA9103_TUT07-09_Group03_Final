@@ -177,21 +177,20 @@ function drawOldPaperNotice() {
   let paperH = paperW * paperRatio;
 
   if (paperImg) {
-    tint(255, 178); // 70% opacity
+    tint(255, 178); // Set to 70% opacity
     imageMode(CENTER);
     image(paperImg, paperX, paperY, paperW, paperH);
     imageMode(CORNER);
     noTint();
   }
 
-  // Moderately increased text size (larger than 8, smaller than 13)
-  let bodySize = 10.5; 
-  let smallSize = 11.5;
-  let lineGap = 18; 
-  let textY = paperY - 40; // Adjusted for new gap size
+  let bodySize = 13;
+  let smallSize = 14;
+  let textY = paperY - 60; // Shift text block upwards
+  let lineGap = 24;
 
   textAlign(CENTER, CENTER);
-  textFont("Dancing Script, cursive");
+  textFont("Dancing Script, cursive"); // Apply Dancing Script for white text
   textStyle(NORMAL);
   textSize(bodySize);
   fill(255, 248, 232, 238);
@@ -202,20 +201,19 @@ function drawOldPaperNotice() {
   textSize(smallSize);
   text("Your mission is to catch two types of fireflies:", paperX, textY + lineGap * 2.3);
 
-  // Keep original readable font for colored text and reduce horizontal gap
-  textFont("Georgia, serif");
+  // Keep original readable font for colored text
+  textFont("Georgia, serif"); 
   textStyle(BOLD);
   fill(230, 103, 25);
-  text("Sundrops", paperX - 90, textY + lineGap * 3.3); // Further reduced horizontal gap
+  text("Sundrops", paperX - 130, textY + lineGap * 3.2); // Reduced horizontal gap
   fill(35, 150, 255);
-  text("Moonbeams", paperX + 90, textY + lineGap * 3.3);
+  text("Moonbeams", paperX + 130, textY + lineGap * 3.2); // Reduced horizontal gap
 
-  textFont("Dancing Script, cursive");
+  textFont("Dancing Script, cursive"); // Restore Dancing Script
   textStyle(NORMAL);
-  textSize(bodySize);
   fill(255, 248, 232, 238);
-  text("You have 120 seconds each round, with surprises along the way.", paperX, textY + lineGap * 4.3);
-  text("Are you ready?", paperX, textY + lineGap * 5.3);
+  text("You have 120 seconds each round, with surprises along the way.", paperX, textY + lineGap * 4.1);
+  text("Are you ready?", paperX, textY + lineGap * 5); // Removed 'to catch'
 }
 
 // Draw the large magical start button and keep it visually inviting with pulse and float motion.
@@ -250,7 +248,7 @@ function drawStartButton() {
   textStyle(NORMAL);
   textSize(constrain(b.h * 0.18, 15, 22));
   fill(232, 246, 255);
-  text("GO!", b.x, b.y + floatY + b.h * 0.26);
+  text("GO!", b.x, b.y + floatY + b.h * 0.26); // Changed to GO!
 }
 
 // Shared glow renderer used by start-screen and normal gameplay fireflies.
@@ -289,31 +287,5 @@ function fitText(label, maxW, startSize, minSize) {
   while (textWidth(label) > maxW && s > minSize) {
     s -= 1;
     textSize(s);
-  }
-}
-
-// Replace the system cursor with the net.png asset, or use standard arrow over end buttons.
-function drawCustomCursor() {
-  if ((gameState === "win" || gameState === "lose") && isMouseInside(endButtonBounds)) {
-    cursor(ARROW);
-    return;
-  }
-  if (gameState === "start" && isMouseInside(startButtonBounds)) {
-    cursor(ARROW);
-    return;
-  }
-
-  noCursor();
-
-  if (netImg) {
-    imageMode(CENTER);
-    image(netImg, mouseX + 12, mouseY + 12, 54, 54);
-    imageMode(CORNER);
-  } else {
-    noFill();
-    stroke(235, 245, 255, 190);
-    strokeWeight(2);
-    circle(mouseX, mouseY, 34);
-    line(mouseX - 14, mouseY + 14, mouseX + 18, mouseY - 18);
   }
 }
