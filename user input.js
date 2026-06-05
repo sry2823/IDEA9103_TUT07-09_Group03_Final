@@ -166,3 +166,238 @@ function canClickNormalFirefly(f) {
 
   return true;
 }
+// Begin a basic QTE with a fixed success zone and a moving cursor.
+function startCaptureQTE(kind, target) {
+  if (target === null) {
+    return;
+  }
+
+  if (kind === "normal") {
+    target.inQte = true;
+  }
+
+  activeCapture = {
+    kind: kind,
+    target: target,
+    x: target.x,
+    y: target.y,
+    safeStart: 0.40,
+    safeW: 0.20,
+    cursorPos: 0,
+    cursorSpeed: 0.01,
+    cursorDir: 1,
+    startTime: millis()
+  };
+}
+
+// Draw and update a simple QTE bar.
+function drawCaptureQTE() {
+  if (activeCapture === null) {
+    return;
+  }
+
+  let target = activeCapture.target;
+  activeCapture.x = target.x;
+  activeCapture.y = target.y;
+
+  activeCapture.cursorPos += activeCapture.cursorSpeed * activeCapture.cursorDir;
+
+  if (activeCapture.cursorPos < 0) {
+    activeCapture.cursorPos = 0;
+    activeCapture.cursorDir = 1;
+  }
+
+  if (activeCapture.cursorPos > 1) {
+    activeCapture.cursorPos = 1;
+    activeCapture.cursorDir = -1;
+  }
+
+  let barW = 180;
+  let barH = 14;
+  let barX = activeCapture.x;
+  let barY = activeCapture.y - 44;
+
+  textAlign(CENTER, CENTER);
+  textFont("Roboto, Arial, sans-serif");
+  textStyle(BOLD);
+  textSize(13);
+  fill(235, 246, 255);
+  text("Press SPACE", barX, barY - 22);
+
+  rectMode(CENTER);
+  noStroke();
+
+  fill(20, 28, 42, 180);
+  rect(barX, barY, barW, barH, 7);
+
+  let safeX = barX - barW / 2 + activeCapture.safeStart * barW;
+  let safeW = activeCapture.safeW * barW;
+
+  fill(245, 250, 255, 210);
+  rect(safeX + safeW / 2, barY, safeW, barH - 4, 5);
+
+  let cursorX = barX - barW / 2 + activeCapture.cursorPos * barW;
+
+  stroke(100, 200, 255);
+  strokeWeight(3);
+  line(cursorX, barY - barH, cursorX, barY + barH);
+}
+
+// Evaluate whether the moving cursor is currently inside the success zone.
+function finishCaptureQTE() {
+  let p = activeCapture.cursorPos;
+  let success = p >= activeCapture.safeStart && p <= activeCapture.safeStart + activeCapture.safeW;
+
+  if (success) {
+    completeCapture();
+  } else {
+    failCapture();
+  }
+}
+
+// Apply successful capture results for normal fireflies.
+function completeCapture() {
+  let kind = activeCapture.kind;
+  let target = activeCapture.target;
+
+  if (kind === "normal") {
+    target.visible = false;
+    target.caught = true;
+    target.inQte = false;
+    addDisappearEffect(target.x, target.y, target.side);
+    addCapturedFirefly(target.side);
+  }
+
+  activeCapture = null;
+  checkMissionComplete();
+}
+
+// Failed QTE returns a normal firefly to flight.
+function failCapture() {
+  let kind = activeCapture.kind;
+  let target = activeCapture.target;
+
+  if (kind === "normal") {
+    target.inQte = false;
+  }
+
+  activeCapture = null;
+}
+
+// Begin a basic QTE with a fixed success zone and a moving cursor.
+function startCaptureQTE(kind, target) {
+  if (target === null) {
+    return;
+  }
+
+  if (kind === "normal") {
+    target.inQte = true;
+  }
+
+  activeCapture = {
+    kind: kind,
+    target: target,
+    x: target.x,
+    y: target.y,
+    safeStart: 0.40,
+    safeW: 0.20,
+    cursorPos: 0,
+    cursorSpeed: 0.01,
+    cursorDir: 1,
+    startTime: millis()
+  };
+}
+
+// Draw and update a simple QTE bar.
+function drawCaptureQTE() {
+  if (activeCapture === null) {
+    return;
+  }
+
+  let target = activeCapture.target;
+  activeCapture.x = target.x;
+  activeCapture.y = target.y;
+
+  activeCapture.cursorPos += activeCapture.cursorSpeed * activeCapture.cursorDir;
+
+  if (activeCapture.cursorPos < 0) {
+    activeCapture.cursorPos = 0;
+    activeCapture.cursorDir = 1;
+  }
+
+  if (activeCapture.cursorPos > 1) {
+    activeCapture.cursorPos = 1;
+    activeCapture.cursorDir = -1;
+  }
+
+  let barW = 180;
+  let barH = 14;
+  let barX = activeCapture.x;
+  let barY = activeCapture.y - 44;
+
+  textAlign(CENTER, CENTER);
+  textFont("Roboto, Arial, sans-serif");
+  textStyle(BOLD);
+  textSize(13);
+  fill(235, 246, 255);
+  text("Press SPACE", barX, barY - 22);
+
+  rectMode(CENTER);
+  noStroke();
+
+  fill(20, 28, 42, 180);
+  rect(barX, barY, barW, barH, 7);
+
+  let safeX = barX - barW / 2 + activeCapture.safeStart * barW;
+  let safeW = activeCapture.safeW * barW;
+
+  fill(245, 250, 255, 210);
+  rect(safeX + safeW / 2, barY, safeW, barH - 4, 5);
+
+  let cursorX = barX - barW / 2 + activeCapture.cursorPos * barW;
+
+  stroke(100, 200, 255);
+  strokeWeight(3);
+  line(cursorX, barY - barH, cursorX, barY + barH);
+}
+
+// Evaluate whether the moving cursor is currently inside the success zone.
+function finishCaptureQTE() {
+  let p = activeCapture.cursorPos;
+  let success = p >= activeCapture.safeStart && p <= activeCapture.safeStart + activeCapture.safeW;
+
+  if (success) {
+    completeCapture();
+  } else {
+    failCapture();
+  }
+}
+
+// Apply successful capture results for normal fireflies.
+function completeCapture() {
+  let kind = activeCapture.kind;
+  let target = activeCapture.target;
+
+  if (kind === "normal") {
+    target.visible = false;
+    target.caught = true;
+    target.inQte = false;
+    addDisappearEffect(target.x, target.y, target.side);
+    addCapturedFirefly(target.side);
+  }
+
+  activeCapture = null;
+  checkMissionComplete();
+}
+
+// Failed QTE returns a normal firefly to flight.
+function failCapture() {
+  let kind = activeCapture.kind;
+  let target = activeCapture.target;
+
+  if (kind === "normal") {
+    target.inQte = false;
+  }
+
+  activeCapture = null;
+}
