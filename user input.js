@@ -284,7 +284,7 @@ function failCapture() {
   activeCapture = null;
 }
 
-// Begin a basic QTE with a fixed success zone and a moving cursor.
+// Begin a QTE with a random white success zone and a moving cursor.
 function startCaptureQTE(kind, target) {
   if (target === null) {
     return;
@@ -294,21 +294,26 @@ function startCaptureQTE(kind, target) {
     target.inQte = true;
   }
 
+  let safeW = random(0.35, 0.50);
+  let safeStart = random(0.05, 0.95 - safeW);
+
+  let speed = kind === "note" ? random(0.012, 0.018) : random(0.008, 0.013);
+
   activeCapture = {
     kind: kind,
     target: target,
     x: target.x,
     y: target.y,
-    safeStart: 0.40,
-    safeW: 0.20,
-    cursorPos: 0,
-    cursorSpeed: 0.01,
-    cursorDir: 1,
+    safeStart: safeStart,
+    safeW: safeW,
+    cursorPos: random(0, 1),
+    cursorSpeed: speed,
+    cursorDir: random(1) < 0.5 ? -1 : 1,
     startTime: millis()
   };
 }
 
-// Draw and update a simple QTE bar.
+// Draw and update the QTE bar.
 function drawCaptureQTE() {
   if (activeCapture === null) {
     return;
@@ -330,38 +335,58 @@ function drawCaptureQTE() {
     activeCapture.cursorDir = -1;
   }
 
-  let barW = 180;
+  let barW = constrain(width * 0.18, 160, 240);
   let barH = 14;
   let barX = activeCapture.x;
-  let barY = activeCapture.y - 44;
+  let barY = activeCapture.y - 48;
+
+  if (barY < topUIHeight + 45) {
+    barY = activeCapture.y + 48;
+  }
+
+  barX = constrain(barX, barW / 2 + 20, width - barW / 2 - 20);
 
   textAlign(CENTER, CENTER);
   textFont("Roboto, Arial, sans-serif");
   textStyle(BOLD);
-  textSize(13);
+  textSize(14);
   fill(235, 246, 255);
-  text("Press SPACE", barX, barY - 22);
+  let textY = barY < activeCapture.y ? barY - barH - 14 : barY + barH + 14;
+  text("Press SPACE to catch", barX, textY);
 
   rectMode(CENTER);
   noStroke();
+  
+  fill(10, 16, 28, 160);
+  rect(barX, barY, barW + 12, barH + 12, 10);
 
-  fill(20, 28, 42, 180);
-  rect(barX, barY, barW, barH, 7);
+  stroke(235, 246, 255, 145);
+  strokeWeight(1.5);
+  fill(65, 80, 95, 170);
+  rect(barX, barY, barW, barH, 8);
 
   let safeX = barX - barW / 2 + activeCapture.safeStart * barW;
   let safeW = activeCapture.safeW * barW;
 
-  fill(245, 250, 255, 210);
-  rect(safeX + safeW / 2, barY, safeW, barH - 4, 5);
+  blendMode(ADD);
+  fill(245, 250, 255, 190);
+  noStroke();
+  rect(safeX + safeW / 2, barY, safeW, barH - 4, 6);
+  blendMode(BLEND);
 
   let cursorX = barX - barW / 2 + activeCapture.cursorPos * barW;
+  let pointerSize = barH + 8;
 
-  stroke(100, 200, 255);
-  strokeWeight(3);
-  line(cursorX, barY - barH, cursorX, barY + barH);
+  noStroke();
+  fill(40, 140, 255, 80);
+  circle(cursorX, barY, pointerSize * 1.6);
+  fill(100, 200, 255, 160);
+  circle(cursorX, barY, pointerSize * 1.2);
+  fill(220, 245, 255, 255);
+  circle(cursorX, barY, pointerSize * 0.8);
 }
 
-// Evaluate whether the moving cursor is currently inside the success zone.
+// Evaluate whether the moving cursor is currently inside the white success zone.
 function finishCaptureQTE() {
   let p = activeCapture.cursorPos;
   let success = p >= activeCapture.safeStart && p <= activeCapture.safeStart + activeCapture.safeW;
@@ -373,7 +398,7 @@ function finishCaptureQTE() {
   }
 }
 
-// Apply successful capture results for normal fireflies.
+// Apply successful capture results for normal fireflies, red firefly, or silver note.
 function completeCapture() {
   let kind = activeCapture.kind;
   let target = activeCapture.target;
@@ -386,17 +411,33 @@ function completeCapture() {
     addCapturedFirefly(target.side);
   }
 
+  if (kind === "red") {
+    catchRedFirefly();
+  }
+
+  if (kind === "note") {
+    catchSilverNoteSuccess(target.x, target.y);
+  }
+
   activeCapture = null;
   checkMissionComplete();
 }
 
-// Failed QTE returns a normal firefly to flight.
+// Failed QTE returns a normal firefly to flight, but removes red firefly or silver note.
 function failCapture() {
   let kind = activeCapture.kind;
   let target = activeCapture.target;
 
   if (kind === "normal") {
     target.inQte = false;
+  }
+
+  if (kind === "red") {
+    makeRedFireflyDisappear();
+  }
+
+  if (kind === "note") {
+    failSilverNoteQTE();
   }
 
   activeCapture = null;
