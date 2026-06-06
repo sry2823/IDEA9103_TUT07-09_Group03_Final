@@ -442,3 +442,91 @@ function failCapture() {
 
   activeCapture = null;
 }
+// Shared end-screen wrapper keeps the forest background visible behind win/lose UI.
+function drawEndScreen(result) {
+  drawFullBackground();
+
+  rectMode(CORNER);
+  fill(0, 120);
+  rect(0, 0, width, height);
+
+  if (result === "win") {
+    drawWinScreen();
+  } else {
+    drawLoseScreen();
+  }
+}
+
+// Success screen: show the glass bottle and nebula effect in the center.
+function drawWinScreen() {
+  let glassW = constrain(width * 0.432, 288, 558);
+  let glassRatio = glassImg ? glassImg.height / glassImg.width : 0.78;
+  let glassH = glassW * glassRatio;
+
+  let bottleCenterX = width / 2;
+  let bottleCenterY = height * 0.38;
+  let nebulaSize = glassW * 0.36;
+
+  // Draw nebula behind the glass bottle.
+  if (nebulaImg) {
+    push();
+    imageMode(CENTER);
+    noTint();
+    translate(bottleCenterX, bottleCenterY);
+    rotate(frameCount * 0.004);
+    image(nebulaImg, 0, 0, nebulaSize, nebulaSize);
+    pop();
+  }
+
+  // Draw the glass bottle above the nebula.
+  if (glassImg) {
+    push();
+    imageMode(CENTER);
+    noTint();
+    image(glassImg, bottleCenterX, bottleCenterY, glassW, glassH);
+    pop();
+  }
+
+  drawEndTitle("You are now the Star Keeper!", height * 0.75);
+  drawEndButton("Play Again", height * 0.85);
+}
+
+// Failure screen: quiet text over the dark forest.
+function drawLoseScreen() {
+  drawEndTitle("The stars slipped away", height * 0.48);
+  drawEndButton("Try Again", height * 0.68);
+}
+
+// Draw the result message on win/lose screens.
+function drawEndTitle(title, posY) {
+  textAlign(CENTER, CENTER);
+  textFont("Luminari, Georgia, serif");
+  textStyle(BOLD);
+  textSize(constrain(width * 0.034, 26, 52));
+  fill(255, 224, 120);
+  text(title, width / 2, posY);
+}
+
+// Draw the restart button on win/lose screens and update its bounds for hit testing.
+function drawEndButton(label, posY) {
+  endButtonBounds.w = constrain(width * 0.19, 220, 320);
+  endButtonBounds.h = 60;
+  endButtonBounds.x = width / 2;
+  endButtonBounds.y = posY;
+
+  let hover = isMouseInside(endButtonBounds);
+
+  rectMode(CENTER);
+  stroke(255, 220, 120, hover ? 230 : 160);
+  strokeWeight(2);
+  fill(28, 45, 66, hover ? 220 : 170);
+  rect(endButtonBounds.x, endButtonBounds.y, endButtonBounds.w, endButtonBounds.h, 16);
+
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textFont("Roboto, Arial, sans-serif");
+  textStyle(BOLD);
+  textSize(20);
+  fill(245, 250, 255);
+  text(label, endButtonBounds.x, endButtonBounds.y);
+}
