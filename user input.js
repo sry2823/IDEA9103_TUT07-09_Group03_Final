@@ -445,7 +445,6 @@ function failCapture() {
 // Shared end-screen wrapper keeps the forest background visible behind win/lose UI.
 function drawEndScreen(result) {
   drawFullBackground();
-
   rectMode(CORNER);
   fill(0, 120);
   rect(0, 0, width, height);
@@ -457,17 +456,20 @@ function drawEndScreen(result) {
   }
 }
 
-// Success screen: show the glass bottle and nebula effect in the center.
+// Success screen: center the visible bottle itself, then layer nebula under glass.
 function drawWinScreen() {
-  let glassW = constrain(width * 0.432, 288, 558);
+  // This is 10% smaller than the previous 0.432 / 288 / 558 size range.
+  let glassW = constrain(width * 0.389, 260, 502);
   let glassRatio = glassImg ? glassImg.height / glassImg.width : 0.78;
   let glassH = glassW * glassRatio;
-
   let bottleCenterX = width / 2;
   let bottleCenterY = height * 0.38;
-  let nebulaSize = glassW * 0.36;
-
-  // Draw nebula behind the glass bottle.
+  let offset = getGlassVisibleOffset();
+  let glassDrawX = bottleCenterX - offset.x * glassW;
+  let glassDrawY = bottleCenterY - offset.y * glassH;
+  let nebulaSize = glassW * 0.376;
+  
+  // Layer 1: draw the nebula first at 100% opacity, underneath the glass.
   if (nebulaImg) {
     push();
     imageMode(CENTER);
@@ -478,17 +480,69 @@ function drawWinScreen() {
     pop();
   }
 
-  // Draw the glass bottle above the nebula.
+  // Layer 2: draw glass last at 100% opacity so it sits above the nebula.
   if (glassImg) {
     push();
     imageMode(CENTER);
     noTint();
-    image(glassImg, bottleCenterX, bottleCenterY, glassW, glassH);
+    image(glassImg, glassDrawX, glassDrawY, glassW, glassH);
     pop();
   }
 
-  drawEndTitle("You are now the Star Keeper!", height * 0.75);
+  // Position typography cleanly between container base bounds and footer button
+  let textPlacementY = height * 0.76; 
+  drawEndTitle("You are now the Star Keeper!", textPlacementY);
+  
+  // Kept perfectly at your requested 0.85 threshold coordinates
   drawEndButton("Play Again", height * 0.85);
+}
+// Find the visible alpha bounds of glass.png so the actual bottle, not its transparent canvas, is centered.
+function getGlassVisibleOffset() {
+  if (glassImg === null) {
+    return { x: 0, y: 0 };
+  }
+
+  if (glassVisibleOffset !== null) {
+    return glassVisibleOffset;
+  }
+
+  glassImg.loadPixels();
+
+  let minX = glassImg.width;
+  let maxX = 0;
+  let minY = glassImg.height;
+  let maxY = 0;
+  let foundPixel = false;
+
+  for (let y = 0; y < glassImg.height; y++) {
+    for (let x = 0; x < glassImg.width; x++) {
+      let index = (y * glassImg.width + x) * 4 + 3;
+      let alphaValue = glassImg.pixels[index];
+
+      if (alphaValue > 10) {
+        minX = min(minX, x);
+        maxX = max(maxX, x);
+        minY = min(minY, y);
+        maxY = max(maxY, y);
+        foundPixel = true;
+      }
+    }
+  }
+
+  if (!foundPixel) {
+    glassVisibleOffset = { x: 0, y: 0 };
+    return glassVisibleOffset;
+  }
+
+  let visibleCenterX = (minX + maxX) / 2;
+  let visibleCenterY = (minY + maxY) / 2;
+
+  glassVisibleOffset = {
+    x: (visibleCenterX - glassImg.width / 2) / glassImg.width,
+    y: (visibleCenterY - glassImg.height / 2) / glassImg.height
+  };
+
+  return glassVisibleOffset;
 }
 
 // Failure screen: quiet text over the dark forest.
@@ -497,20 +551,20 @@ function drawLoseScreen() {
   drawEndButton("Try Again", height * 0.68);
 }
 
-// Draw the result message on win/lose screens.
+
+// Draw the result message with downscaled text size to guarantee zero overlap errors.
 function drawEndTitle(title, posY) {
   textAlign(CENTER, CENTER);
   textFont("Luminari, Georgia, serif");
   textStyle(BOLD);
-  textSize(constrain(width * 0.034, 26, 52));
+  textSize(constrain(width * 0.028, 22, 44)); 
   fill(255, 224, 120);
   text(title, width / 2, posY);
 }
-
 // Draw the restart button on win/lose screens and update its bounds for hit testing.
 function drawEndButton(label, posY) {
-  endButtonBounds.w = constrain(width * 0.19, 220, 320);
-  endButtonBounds.h = 60;
+  endButtonBounds.w = constrain(width * 0.18, 210, 300);
+  endButtonBounds.h = 58;
   endButtonBounds.x = width / 2;
   endButtonBounds.y = posY;
 
