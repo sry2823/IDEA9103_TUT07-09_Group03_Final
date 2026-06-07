@@ -584,3 +584,30 @@ function drawEndButton(label, posY) {
   fill(245, 250, 255);
   text(label, endButtonBounds.x, endButtonBounds.y);
 }
+
+// Replace the system cursor with the net.png asset, except when hovering over specific buttons.
+function drawCustomCursor() {
+  if ((gameState === "win" || gameState === "lose") && isMouseInside(endButtonBounds)) {
+    cursor(ARROW);
+    return;
+  }
+  
+  if (gameState === "start" && isMouseInside(startButtonBounds)) {
+    cursor(ARROW);
+    return;
+  }
+
+  noCursor();
+
+  if (netImg) {
+    imageMode(CENTER);
+    image(netImg, mouseX + 12, mouseY + 12, 54, 54);
+    imageMode(CORNER);
+  } else {
+    noFill();
+    stroke(235, 245, 255, 190);
+    strokeWeight(2);
+    circle(mouseX, mouseY, 34);
+    line(mouseX - 14, mouseY + 14, mouseX + 18, mouseY - 18);
+  }
+}
