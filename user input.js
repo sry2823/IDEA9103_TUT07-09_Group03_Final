@@ -1,9 +1,15 @@
 // User input: mouse clicks, QTE capture bar, custom cursor, and end screens.
 
+// Active QTE state. Null means the player is not currently catching anything.
 let activeCapture = null;
+
+// End-screen and cursor image assets.
 let glassImg = null;
 let nebulaImg = null;
+let netImg = null;
+let glassVisibleOffset = null;
 
+// Load visual assets used only by input/end-screen systems.
 function preloadUserInputAssets() {
   glassImg = loadImage(
     "assets/glass.png",
@@ -24,7 +30,7 @@ function preloadUserInputAssets() {
       nebulaImg = null;
     }
   );
-  
+
   netImg = loadImage(
     "assets/net.png",
     function (img) {
@@ -55,7 +61,6 @@ function resetCaptureSystem() {
   activeCapture = null;
 }
 
-
 // Central click handler for start button, restart buttons, frozen side, and firefly targeting.
 function mousePressed() {
   if (gameState === "start") {
@@ -65,7 +70,8 @@ function mousePressed() {
     }
     return;
   }
-   if (gameState === "win" || gameState === "lose") {
+
+  if (gameState === "win" || gameState === "lose") {
     if (isMouseInside(endButtonBounds)) {
       returnToStartScreen();
     }
@@ -100,7 +106,9 @@ function mousePressed() {
       startCaptureQTE(targetInfo.kind, targetInfo.target);
     }
   }
-}// Space is the QTE confirmation key.
+}
+
+// Space is the QTE confirmation key.
 function keyPressed() {
   if (gameState === "playing" && activeCapture !== null && key === " ") {
     finishCaptureQTE();
@@ -165,123 +173,6 @@ function canClickNormalFirefly(f) {
   }
 
   return true;
-}
-// Begin a basic QTE with a fixed success zone and a moving cursor.
-function startCaptureQTE(kind, target) {
-  if (target === null) {
-    return;
-  }
-
-  if (kind === "normal") {
-    target.inQte = true;
-  }
-
-  activeCapture = {
-    kind: kind,
-    target: target,
-    x: target.x,
-    y: target.y,
-    safeStart: 0.40,
-    safeW: 0.20,
-    cursorPos: 0,
-    cursorSpeed: 0.01,
-    cursorDir: 1,
-    startTime: millis()
-  };
-}
-
-// Draw and update a simple QTE bar.
-function drawCaptureQTE() {
-  if (activeCapture === null) {
-    return;
-  }
-
-  let target = activeCapture.target;
-  activeCapture.x = target.x;
-  activeCapture.y = target.y;
-
-  activeCapture.cursorPos += activeCapture.cursorSpeed * activeCapture.cursorDir;
-
-  if (activeCapture.cursorPos < 0) {
-    activeCapture.cursorPos = 0;
-    activeCapture.cursorDir = 1;
-  }
-
-  if (activeCapture.cursorPos > 1) {
-    activeCapture.cursorPos = 1;
-    activeCapture.cursorDir = -1;
-  }
-
-  let barW = 180;
-  let barH = 14;
-  let barX = activeCapture.x;
-  let barY = activeCapture.y - 44;
-
-  textAlign(CENTER, CENTER);
-  textFont("Roboto, Arial, sans-serif");
-  textStyle(BOLD);
-  textSize(13);
-  fill(235, 246, 255);
-  text("Press SPACE", barX, barY - 22);
-
-  rectMode(CENTER);
-  noStroke();
-
-  fill(20, 28, 42, 180);
-  rect(barX, barY, barW, barH, 7);
-
-  let safeX = barX - barW / 2 + activeCapture.safeStart * barW;
-  let safeW = activeCapture.safeW * barW;
-
-  fill(245, 250, 255, 210);
-  rect(safeX + safeW / 2, barY, safeW, barH - 4, 5);
-
-  let cursorX = barX - barW / 2 + activeCapture.cursorPos * barW;
-
-  stroke(100, 200, 255);
-  strokeWeight(3);
-  line(cursorX, barY - barH, cursorX, barY + barH);
-}
-
-// Evaluate whether the moving cursor is currently inside the success zone.
-function finishCaptureQTE() {
-  let p = activeCapture.cursorPos;
-  let success = p >= activeCapture.safeStart && p <= activeCapture.safeStart + activeCapture.safeW;
-
-  if (success) {
-    completeCapture();
-  } else {
-    failCapture();
-  }
-}
-
-// Apply successful capture results for normal fireflies.
-function completeCapture() {
-  let kind = activeCapture.kind;
-  let target = activeCapture.target;
-
-  if (kind === "normal") {
-    target.visible = false;
-    target.caught = true;
-    target.inQte = false;
-    addDisappearEffect(target.x, target.y, target.side);
-    addCapturedFirefly(target.side);
-  }
-
-  activeCapture = null;
-  checkMissionComplete();
-}
-
-// Failed QTE returns a normal firefly to flight.
-function failCapture() {
-  let kind = activeCapture.kind;
-  let target = activeCapture.target;
-
-  if (kind === "normal") {
-    target.inQte = false;
-  }
-
-  activeCapture = null;
 }
 
 // Begin a QTE with a random white success zone and a moving cursor.
@@ -442,6 +333,7 @@ function failCapture() {
 
   activeCapture = null;
 }
+
 // Shared end-screen wrapper keeps the forest background visible behind win/lose UI.
 function drawEndScreen(result) {
   drawFullBackground();
@@ -468,7 +360,7 @@ function drawWinScreen() {
   let glassDrawX = bottleCenterX - offset.x * glassW;
   let glassDrawY = bottleCenterY - offset.y * glassH;
   let nebulaSize = glassW * 0.376;
-  
+
   // Layer 1: draw the nebula first at 100% opacity, underneath the glass.
   if (nebulaImg) {
     push();
@@ -496,6 +388,7 @@ function drawWinScreen() {
   // Kept perfectly at your requested 0.85 threshold coordinates
   drawEndButton("Play Again", height * 0.85);
 }
+
 // Find the visible alpha bounds of glass.png so the actual bottle, not its transparent canvas, is centered.
 function getGlassVisibleOffset() {
   if (glassImg === null) {
@@ -551,7 +444,6 @@ function drawLoseScreen() {
   drawEndButton("Try Again", height * 0.68);
 }
 
-
 // Draw the result message with downscaled text size to guarantee zero overlap errors.
 function drawEndTitle(title, posY) {
   textAlign(CENTER, CENTER);
@@ -561,6 +453,7 @@ function drawEndTitle(title, posY) {
   fill(255, 224, 120);
   text(title, width / 2, posY);
 }
+
 // Draw the restart button on win/lose screens and update its bounds for hit testing.
 function drawEndButton(label, posY) {
   endButtonBounds.w = constrain(width * 0.18, 210, 300);
