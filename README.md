@@ -167,7 +167,7 @@ We referred to the following authoritative sources for theoretical inspiration, 
 
 ### 1. Game Design & Narrative Inspiration
 * **thatgamecompany. (2012). *Journey* [Video Game].** * *Influence:* Inspired our core interactive philosophy—prioritizing emotional resonance, minimalist control systems, and rich environmental feedback over complex UI interactions.
-* **Takahata, I. (Director). (1988). *Grave of the Fireflies* (火垂之墓) [Film]. Studio Ghibli.**
+* **Takahata, I. (Director). (1988). *Grave of the Fireflies* [Film]. Studio Ghibli.**
   * *Influence:* Heavily influenced the poetic visual narrative, dark atmospheric contrast, and the dualistic warm/cool color palettes of our floating luminescent particles.
 
 ### 2. Acoustic Analysis & Inclusivity Reference
