@@ -194,7 +194,7 @@ Welcome to the mystical forest of **The Star Keeper**. Please follow these direc
 
 
 ### 3. Special Events
-* **Red Firefly:** Spawns every 15 seconds. It dashes erratically at intense speeds. Catching it before its 20-second lifespan ends adds an extra **+5 seconds** to your global countdown. *Note: Red fireflies are rare entities and are completely exempted from user voice-gating; you can click and capture them immediately without vocalizing.*
+* **Red Firefly:** Spawns every 15 seconds. It dashes erratically at intense speeds. Catching it before its 20-second lifespan ends adds an extra +5 seconds to your global countdown. *Note: Red fireflies are rare entities and are completely exempted from user voice-gating; you can click and capture them immediately without vocalizing.*
 * **Frozen Side:** Every 30 seconds, a randomized screen hemisphere will be frozen for a fixed 5-second duration. During a freeze, all interactions in that area are disabled, your net cursor will be completely hidden, and entities inside cannot be captured.
 * **Silver Note:** The Silver Note spawns once at a random time between 20 and 90 seconds after the start of the game and will not appear on the same side consecutively. 
 * **ECG wave-like flight pattern:** During this event, capturing fireflies no longer requires the QTE progress bar, and the click detection radius for normal fireflies is expanded to 44 pixels, making them significantly easier to catch.
@@ -202,4 +202,4 @@ Welcome to the mystical forest of **The Star Keeper**. Please follow these direc
 
 ### 4. Resets & Session Refreshing
 * At any point during gameplay, you can click **"The Star Keeper"** button on the top-center UI to immediately wipe active states, regenerate random targets, and reset the 120-second game time.
-* Upon entering a win/loss screen, click the **"Restart"** button to safely return to the main menu.
+* Upon entering a win/loss screen, click the **Play Again** or **Try Again**button to safely return to the main menu.
