@@ -202,4 +202,4 @@ Welcome to the mystical forest of **The Star Keeper**. Please follow these direc
 
 ### 4. Resets & Session Refreshing
 * At any point during gameplay, you can click **"The Star Keeper"** button on the top-center UI to immediately wipe active states, regenerate random targets, and reset the 120-second game time.
-* Upon entering a win/loss screen, click the **Play Again** or **Try Again**button to safely return to the main menu.
+* Upon entering a win/loss screen, click the **Play Again** or **Try Again** button to safely return to the main menu.
