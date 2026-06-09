@@ -8,8 +8,8 @@
 
 ### Core Influences
 
-* **Gameplay Mechanics (*Journey*):** Inspired by the philosophy of subtle, organic environmental interaction. Players guide and interact with the world through simple movements and non-verbal vocalizations, fostering a calm yet deeply atmospheric experience.
-* **Visual Aesthetic (*Grave of the Fireflies*):** Draws heavily on the poetic imagery of dancing, glowing entities against a dark backdrop. This directly influenced our split-screen visual narrative, contrasting warm-toned and cool-toned luminescent dynamics.
+* **Gameplay Mechanics (*Journey*):** Inspired by the philosophy of subtle, organic environmental interaction. Players guide and interact with the world through simple movements, fostering a calm yet deeply atmospheric experience.
+* **Visual Aesthetic (*Grave of the Fireflies*):** Draws on the poetic imagery of dancing, glowing entities against a dark backdrop. This directly influenced our split-screen visual narrative, contrasting warm-toned and cool-toned luminescent dynamics.
 
 ### Narrative Backstory
 
@@ -26,8 +26,8 @@ Ultimately, the installation transforms the intuitive action of "catching firefl
 The project’s modular architecture divides game states and system logistics into five core scripts coordinated under a single `index.html`:
 
 * **`sketch.js`**: Handles the foundation, including canvas initialization and the proactive preloading of multi-layered graphical and audio assets.
-* **`Berlin Noise.js`**: Governs the core gameplay scene, utilizing Perlin noise algorithms to compute fluid firefly coordinates while rendering the top info UI.
-* **`Audio input.js`**: Manages real-time microphone streams and FFT analysis to extract track amplitudes as well as vocal timbre structures.
+* **`Perlin noise and randomness.js`**: Governs the core gameplay scene, utilizing Perlin noise algorithms to compute fluid firefly coordinates while rendering the top info UI.
+* **`Audio.js`**: Manages real-time microphone streams and FFT analysis to extract track amplitudes as well as vocal timbre structures.
 * **`Time-based.js`**: Tracks time increments independently of the browser frame rate to precisely trigger global countdowns and environmental crisis events.
 * **`User input.js`**: Monitors net cursor coordinates, custom click interaction boundaries, the Spacebar-based QTE progress bar, and final screen state transitions.
 
@@ -35,7 +35,7 @@ The project’s modular architecture divides game states and system logistics in
 
 ### 2. Implemented Techniques and Why
 
-#### Perlin Noise
+#### Perlin noise
 Grants fireflies fluid, organic random flight paths overlaid with a sine-wave floating effect. This eliminates the jerky, artificial movement of ordinary random motion and simulates natural biological hovering.
 
 #### Time-based System
@@ -54,7 +54,7 @@ Dynamically rebuilds the game canvas boundaries based on the running device's sc
 Redraws the pointer into a stylized "net" icon with smart state switching. It reverts to a standard arrow over buttons for easy navigation and hides completely inside frozen zones to visually signal blocked interaction, silently guiding player behavior.
 
 #### Mutual Exclusion Event Chain
-Manages event concurrency via boolean flags. It freezes the red firefly and ice countdowns whenever the 15-second silver note/ECG event is active, and blocks the silver note from spawning if another crisis is already present, perfectly preventing overlapping deadlocks.
+Manages event concurrency via boolean flags. It freezes the red firefly and ice countdowns whenever the 15-second silver note/ECG event is active, perfectly preventing overlapping deadlocks.
 
 ---
 
@@ -68,13 +68,12 @@ Manages event concurrency via boolean flags. It freezes the red firefly and ice 
 #### Shift from Pitch to Phoneme Control
 > **Decision:** Restructure the voice recognition algorithm to detect relative formant ratios ("Ooh" / "Eee") rather than absolute pitch (High / Low).
 > 
-> **Rationale:** Initial prototype user testing revealed biological limitations where deep-voiced players completely struggled to trigger high-pitch mechanics. Shifting to vowel timbre extraction bypassed individual vocal range limits, strictly embodying the principles of accessible interaction design.
+> **Rationale:** The feedback got from coordinator revealed biological limitations where deep-voiced players completely struggled to trigger high-pitch mechanics. Shifting to vowel timbre extraction bypassed individual vocal range limits, strictly embodying the principles of accessible interaction design.
 
-#### Adaptive QTE Hitbox Expansion
-> **Decision:** Programmatically expand the mouse click hitbox radius for normal bugs to a forgiving 44 pixels during the special audio event.
+#### Expanded Capture Accessibility During the ECG Event
+> **Decision:** During the 15-second ECG event, the standard QTE progress bar is temporarily bypassed. Instead, a successful capture is triggered immediately when the player clicks within the target's hitbox radius. In addition, the hitbox radius for fireflies is expanded to 44 pixels, making them significantly easier to catch during the event.
 > 
-> **Rationale:** During the 15-second chaotic "ECG wave" event, fireflies move at extreme velocities in sharp zig-zag patterns. Expanding the hitbox balances the drastic spike in visual chaos, maintaining gameplay fairness and keeping the interaction engaging rather than frustrating.
-
+> **Rationale:** During the ECG event, fireflies move at extremely high speeds and follow sharp zig-zag wave patterns synchronized with the beat audio. Removing the QTE requirement and enlarging the click detection radius helps balance the sudden increase in visual complexity and interaction difficulty. This adjustment maintains gameplay fairness, reduces player frustration, and encourages active participation during the event. As a result, the ECG sequence feels like a rewarding bonus experience rather than a punishment for the player.
 ---
 
 ## Mechanic Ownership
@@ -98,11 +97,11 @@ Beyond the four required interactive mechanics, `sketch.js` serves as the founda
 
 #### Core Implementations
 * **Music & Ambient Pacing:** Cycles through three long-form background audio tracks, seamlessly extracting randomized 25-second acoustic blocks. Leverages RMS amplitude monitoring every 5 seconds to map sound levels into velocity boundaries scaled between 3 and 20.
-* **Universal Phoneme Voice Control:** Utilizes Formant frequency extraction (analyzing relative resonance peaks instead of pitch-dependent fundamental frequency $F_0$) to distinguish player-vocalized "Ooh" and "Eee" tokens. Beyond dynamic deceleration, this mechanic acts as the absolute interaction gatekeeper: **capturing is strictly forbidden unless the player is actively do the voice input.**
+* **Universal Phoneme Voice Control:** Utilizes Formant frequency extraction (analyzing relative resonance peaks instead of pitch-dependent fundamental frequency $F_0$) to distinguish player-vocalized "Ooh" and "Eee" tokens. Beyond dynamic deceleration, this mechanic acts as the absolute interaction gatekeeper.
 * **Silver Note:** Capturing the silver note triggers a transition to a different background track, causing all fireflies to execute an ECG-like wave flight pattern synchronized to the rhythm of the new music.
 
 #### Cross-Module Integrations
-* **With Berlin Noise:** Transforms music frequency data into direct variable multipliers, overlaying a noticeable acoustic pulse onto the organic noise-driven velocity calculations.
+* **With Perlin noise:** Transforms music frequency data into direct variable multipliers, overlaying a noticeable acoustic pulse onto the organic noise-driven velocity calculations.
 * **With Time-based System:** Triggers severe boolean flags during active Silver Note events to forcefully pause global red firefly lifespans and ice freeze countdowns, avoiding extreme hazard overlaps.
 * **With User Input:** Capturing the silver note expands the mouse click hitbox radius for normal fireflies, making them much easier to capture during the event.
 
@@ -112,13 +111,13 @@ Beyond the four required interactive mechanics, `sketch.js` serves as the founda
 
 #### Core Implementations
 * **Global Countdown Tracker:** Monitors the deterministic 120-second game clock, enforcing the absolute highest runtime priority to stop interaction loops the exact millisecond the timer hits zero.
-* **Red Firefly Spawning Engine:** Runs a strict 15-second generation cycle that introduces a rapid red firefly. Capturing it extends the session timer by 5 seconds, whereas a failure triggers an automated entity deletion and cooling cycle.
+* **Red Firefly Spawning Engine:** Runs a strict 15-second generation cycle that introduces a rapid red firefly and lasting for 20-second. Capturing it extends the session timer by 5 seconds, whereas a failure triggers an automated entity deletion and cooling cycle.
 * **Frozen Side Hazard:** Deploys a recurring 30-second localized obstacle that blankets a randomized screen hemisphere with an un-interactive ice mask (`frozen.png`) for a fixed 5-second duration.
 * **Punitive Disappearance Routine:** Triggers a 15-second automated check that forces a regular firefly to erupt. Employs an essential safety check: if the remaining counts match target mission variables, it prevents entity destruction to preserve game solvability.
 
 #### Cross-Module Integrations
-* **With Berlin Noise:** Feeds high-velocity parameters directly into the noise coordinate calculations whenever a red firefly is initialized, ensuring its flight path remains erratic and urgent.
-* **With Audio Input:** Freezes all internal timers while a silver note event is active, and conversely blocks sound-based silver notes from spawning if an ice layer or red entity is currently occupying the scene.
+* **With Perlin noise:** Feeds high-velocity parameters directly into the noise coordinate calculations whenever a red firefly is initialized, ensuring its flight path remains erratic and urgent.
+* **With Audio Input:** Freezes all internal timers while a silver note event is active.
 * **With User Input:** Overrides the input system by disabling all click listeners within a frozen hemisphere and hiding the player net. Instantly breaks active QTE progress bars upon global time expiration.
 
 ---
@@ -130,11 +129,12 @@ Beyond the four required interactive mechanics, `sketch.js` serves as the founda
 * **Perlin Noise Trajectory Engine:** Feeds unique random seeds into Perlin Noise generators to chart fluid, lifelike flight paths, overlaid with independent harmonic sine waves to replicate drifting biological levitation.
 * **Anti-Clumping Separation Calculus:** Executes continuous local distance monitoring (`dist`), calculating localized separation forces to keep neighboring fireflies spaced apart, avoiding overlapping visual clutter.
 * **State UI Component:** Renders the customized 118px information bar. Controls reactive, bounce-animated text-box counters that simulate a turning calendar page when targets increase (+1).
+* **Randomnes:** The required number of fireflies to capture is randomly generated each round, ensuring that every playthrough presents a different challenge and encouraging players to return for repeated attempts.
 
 #### Cross-Module Integrations
 * **With Audio Input:** Relinquishes noise paths during the silver note event, shifting entities into a high-amplitude ECG wave sequence.
 * **With Time-based System:** Hooks directly into the system clock to instantly freeze coordinate modifications for fireflies caught within frozen sectors.
-* **With User Input:** Pulls active entities out of the global coordinate tracking array the moment an QTE Progress Bar is verified, anchoring that specific firefly static in space while allowing the other 39 items to continue their fluid paths.
+* **With User Input:** Pulls active entities out of the global coordinate tracking array the moment an QTE Progress Bar is verified, anchoring that specific firefly static in space while allowing the other items to continue their fluid paths.
 
 ---
 
@@ -142,8 +142,8 @@ Beyond the four required interactive mechanics, `sketch.js` serves as the founda
 
 #### Core Implementations
 * **Contextual Net Cursor:** Features conditional logic that automatically returns the cursor to a pointer over interactive buttons, and completely nullifies it when entering a frozen sector.
-* **Conditional QTE Triggering:** Clicking the central glowing point of a firefly will only initialize the floating progress bar if the voice input condition is simultaneously satisfied. User Input continuously verifies phonetic states, completely rejecting clicks on normal fireflies if the corresponding "Ooh" or "Eee" input is absent.
-* **Evaluator Matrix:** Acts as the central evaluator for all caught entities (Normal, Red, Note). Dispatches success metrics to the UI counters or triggers immediate object deletion upon a failed QTE, ensuring the silver note is penalized with permanent removal.
+* **QTE Trigger Mechanic:** After the player produces the required Ooh or Eee vocal input and clicks on a firefly, a QTE progress bar appears. To successfully capture the target, the player must press the Spacebar while the moving cursor is within the white success zone of the bar. The position and size of the white zone are randomly generated each time, increasing both the challenge and the clarity of the capture process while making the interaction more engaging and enjoyable.
+* **Evaluator Matrix:** Acts as the central evaluator for all caught entities (Normal, Red, Note). Dispatches success metrics to the UI counters or triggers immediate object deletion upon a failed QTE.
 * **End Game Portals:** Controls the display states for win/loss conditions.
 
 #### Cross-Module Integrations
@@ -155,8 +155,9 @@ Beyond the four required interactive mechanics, `sketch.js` serves as the founda
 
 ## AI Acknowledgement
 
-AI tools (specifically Large Language Models) were utilized as collaborative engineering assistants during the development of this project. AI was mainly used to:
+AI tools were utilized as collaborative engineering assistants during the development of this project. AI was mainly used to:
 Writing the foundational code and checking for conflicts between the code of each individual module.
+Several features that were important to our game design, but fell outside the scope of the course requirements, were also implemented. These additions have been clearly annotated and explained through code comments.
 
 ---
 
@@ -181,27 +182,23 @@ Welcome to the mystical forest of **The Star Keeper**. Please follow these direc
 
 ### 1. Awakening the Forest (Prerequisites)
 * Ensure your **microphone** is plugged in, active, and that your browser has been granted permission to access audio input.
-* Launch the application. Click **"Game Start"** to initiate the system countdown and begin audio playback.
+* Launch the application. Click **"GO!"** to initiate the system countdown and begin audio playback.
 
 ### 2. General Gameplay Controls (Voice-Gated Capture)
 
-Unlike standard clicking games, **you cannot capture a firefly without using your voice first.** Vocalization is the absolute key to unlocking the capture grid.
 
-* **Step 1: Vocal Resonant Control (Unlock & Slow)**
-  * Vocalize a sustained **"Ooh"** sound to target the cool-colored **Moonbeams** on the **Right** side of the screen. This slows them down and unlocks their capture state.
-  * Vocalize a sustained **"Eee"** sound to target the warm-colored **Sundrops** on the **Left** side of the screen. This slows them down and unlocks their capture state.
+* **Step 1: Vocal Control**
+  * Vocalizing "Eee" or "Ooh" can temporarily immobilize the warm-colored or cool-colored fireflies respectively, making them easier to capture.
 * **Step 2: The Net Strike (Mouse Click)**
-  * While actively maintaining the correct vocal sound ("Ooh" for right side / "Eee" for left side), hover your net cursor over a firefly's glowing core and **Left-Click**. *If you click without making the corresponding sound, the interaction will be completely ignored.*
-* **Step 3: The QTE Ritual (Spacebar)**
-  * Once successfully clicked, the targeted entity will lock in place, and a *QTE Progress Bar* will float over it.
-  * Precisely press the **Spacebar** when the cursor lands inside the white success zone.
-  * *Success:* The corresponding counter at the top increases by 1.
-  * *Failure:* Normal bugs escape back into the wild to continue flying, whereas rare entities (red fireflies, musical notes) will directly disappear.
+  * When the net cursor is positioned over the glowing center of a firefly and the player left-clicks, a QTE progress bar is triggered. To successfully capture the firefly, the player must press the Spacebar when the moving cursor enters the white success zone of the progress bar. Successfully captured fireflies disappear from the screen and leave behind a flashing four-pointed star at their original position. Fireflies that fail the capture attempt continue flying normally.
+
 
 ### 3. Special Events
 * **Red Firefly:** Spawns every 15 seconds. It dashes erratically at intense speeds. Catching it before its 20-second lifespan ends adds an extra **+5 seconds** to your global countdown. *Note: Red fireflies are rare entities and are completely exempted from user voice-gating; you can click and capture them immediately without vocalizing.*
-* **Frozen Side:** Every 30 seconds, a randomized screen hemisphere will be frozen (`frozen.png`) for a fixed 5-second duration. During a freeze, **all interactions in that area are disabled**, your net cursor will be completely hidden, and entities inside cannot be captured.
-* **Silver Note:** Spawns once per game between the 20s and 90s mark. Catching it triggers a 15-second ECG event. The forest music shifts to a dynamic beat, the red firefly and ice countdowns are completely frozen, and all fireflies form two rows—entering from the left and right sides respectively—to perform an **ECG wave-like flight pattern**. During this time, the mouse click hitbox radius will expand significantly to 44 pixels—be sure to exploit this perfect window to clear your capture tasks! *Note: The silver note is completely exempted from user voice-gating; it can be clicked and captured immediately without vocalizing.*
+* **Frozen Side:** Every 30 seconds, a randomized screen hemisphere will be frozen for a fixed 5-second duration. During a freeze, all interactions in that area are disabled, your net cursor will be completely hidden, and entities inside cannot be captured.
+* **Silver Note:** The Silver Note spawns once at a random time between 20 and 90 seconds after the start of the game and will not appear on the same side consecutively. 
+* **ECG wave-like flight pattern:** During this event, capturing fireflies no longer requires the QTE progress bar, and the click detection radius for normal fireflies is expanded to 44 pixels, making them significantly easier to catch.
+* **Normal Firefly Disappearance:** Every 30 seconds, one randomly selected firefly will disappear from the field and be replaced by a flashing four-pointed star effect at its original position. A built-in safety check ensures that enough fireflies of each type remain available, so the current round's capture objectives can still be completed.
 
 ### 4. Resets & Session Refreshing
 * At any point during gameplay, you can click **"The Star Keeper"** button on the top-center UI to immediately wipe active states, regenerate random targets, and reset the 120-second game time.
