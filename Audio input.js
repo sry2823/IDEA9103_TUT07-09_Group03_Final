@@ -1,3 +1,12 @@
+// ============================================================================
+// AI Acknowledgement:
+// This file were developed with the assistance of Generative AI (Codex).
+// Specifically, the AI was used to troubleshoot browser audio context suspension issues, 
+// prevent background music from interfering with the microphone's FFT analysis, and help structure 
+// out-of-syllabus p5.sound features (like asynchronous callbacks and explicit audio routing).
+// All generated logic has been reviewed by the author.
+// ============================================================================
+
 // Audio system: forest music, microphone voice control, silver note, and ECG event.
 
 // Background music players and FFT analyzer for reading the current forest track.
@@ -87,9 +96,10 @@ function preloadAudioFiles() {
 }
 
 // Start microphone input and begin playing background music after the user clicks Start.
+// [Out of the course] userStartAudio(): A p5.sound function used to explicitly enable the browser's audio engine. It requires a user gesture (like a button click) to bypass strict browser autoplay policies. Sourced from p5.sound documentation.
 function startAudioSystem() {
   userStartAudio();
-
+  // [Out of the course] getAudioContext(): Accesses the underlying HTML5 Web Audio API directly to check if the audio engine is "suspended" and manually resume() it. Suggested by AI to fix silent audio bugs in certain browsers.
   if (getAudioContext().state !== "running") {
     getAudioContext().resume();
   }
@@ -98,10 +108,12 @@ function startAudioSystem() {
     audioStarted = true;
 
     // Create the microphone and FFT analyzer immediately, then bind again after permission succeeds.
+    // [Out of the course] p5.AudioIn(): Instantiates a microphone object to capture live audio from the user's hardware. Sourced from p5.sound documentation.
     mic = new p5.AudioIn();
     micFft = new p5.FFT(0.65, 512);
+    // [Out of the course] setInput(): Explicitly routes a specific audio source (like the mic or a specific background song) into the FFT analyzer. Suggested by AI to prevent the FFT from incorrectly reading the entire global audio mix.
     micFft.setInput(mic);
-
+    // [Out of the course] Asynchronous Callbacks: Uses success/error functions inside mic.start() to ensure that the FFT analysis only begins *after* the user successfully grants microphone hardware permissions. Suggested by AI.
     mic.start(
       function () {
         micIsReady = true;
@@ -179,10 +191,11 @@ function startNextMusicPart() {
     bgFft = null;
     return;
   }
-
+  // [Out of the course] duration(): Retrieves the total length of the loaded audio track in seconds, used here to calculate a safe random starting point. Sourced from p5.sound documentation.
   let maxStartTime = max(0, bgSong.duration() - musicPartDuration - 1);
   let randomStartTime = random(maxStartTime);
 
+  // [Out of the course] play() with multiple arguments: Utilizes advanced parameters (rate, amp, cueStart, duration) to play a specific, calculated slice of the audio file rather than the whole track. Sourced from p5.sound documentation.
   bgSong.play(0, 1, 0, randomStartTime, musicPartDuration + 1);
   bgSong.setVolume(targetBgVolume, 0.8);
 
@@ -254,7 +267,7 @@ function updateVoiceFreeze() {
     let midEnergy = micFft.getEnergy(900, 1600);
     let highEnergy = micFft.getEnergy(1600, 5200);
     let voiceEnergy = micFft.getEnergy(140, 5200);
-
+    // [Out of the course] getLevel(): Reads the current overall amplitude (volume level) of the microphone input, independent of frequency analysis. Sourced from p5.sound documentation.
     micLevel = mic.getLevel();
 
     // Calibrate the room sound first. This includes any background music leaking from speakers.

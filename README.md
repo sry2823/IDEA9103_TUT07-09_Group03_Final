@@ -41,14 +41,14 @@ Grants fireflies fluid, organic random flight paths overlaid with a sine-wave fl
 #### Time-based System
 Utilizes time increments to manage the core 120-second countdown and drive periodic obstacles (such as the 15-second red firefly respawn, the 30-second half-screen freeze, and the 15-second normal bug explosion). This guarantees tight, predictable control over gameplay pacing regardless of device performance.
 
-#### Voice Interaction and Timbre Extraction
+#### Voice Interaction
 Extracts vowel phonemes ("Ooh" and "Eee" via formant characteristics) in real-time. By bypassing individual physiological vocal pitch differences, it removes biological interaction barriers and ensures universal inclusivity.
 
 #### Audio Visualization
 Uses Fast Fourier Transform (FFT) to analyze background music frequencies. It maps the bass amplitude every 5 seconds into speed multipliers that directly modify the noise algorithm, causing the fireflies' velocity to pulse visibly with the rhythm.
 
 #### Adaptive Layout
-Dynamically rebuilds the game canvas boundaries (`rebuildGameBounds`) based on the running device's screen dimensions. This ensures a perfect, seamless full-screen effect on any display size or device type.
+Dynamically rebuilds the game canvas boundaries based on the running device's screen dimensions. This ensures a perfect, seamless full-screen effect on any display size or device type.
 
 #### Intelligent Custom Cursor
 Redraws the pointer into a stylized "net" icon with smart state switching. It reverts to a standard arrow over buttons for easy navigation and hides completely inside frozen zones to visually signal blocked interaction, silently guiding player behavior.
