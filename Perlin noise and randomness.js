@@ -5,7 +5,8 @@
 // This includes using blendMode() to create additive glowing effects for the fireflies, utilizing the exponentiation operator (**) to calculate physical velocity vectors, and managing web-safe typography rendering via textFont().
 // All generated logic has been reviewed by the author.
 // ============================================================================
-// Game scene: round setup, random firefly generation, Berlin-noise movement, and top UI.
+
+// Perlin noise and randomness : round setup, random firefly generation, Berlin-noise movement, and top UI.
 
 let gameState = "start";
 let gameStarted = false;

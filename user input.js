@@ -5,6 +5,7 @@
 // This includes using the pixels[] array via loadPixels() to calculate precise visual centering offsets for images with transparent padding, utilizing blendMode() for glowing QTE UI elements, and managing custom cursor states.
 // All generated logic has been reviewed by the author.
 // ============================================================================
+
 // User input: mouse clicks, QTE capture bar, custom cursor, and end screens.
 
 // Active QTE state. Null means the player is not currently catching anything.
@@ -265,7 +266,7 @@ function drawCaptureQTE() {
 
   let safeX = barX - barW / 2 + activeCapture.safeStart * barW;
   let safeW = activeCapture.safeW * barW;
-// [Out of the course] blendMode(ADD) / blendMode(BLEND): Changes how shapes blend with the background pixels. 'ADD' combines overlapping colors to create a luminous, glowing effect for the QTE success zone. Sourced from the p5.js official reference and suggested by AI.
+ // [Out of the course] blendMode(ADD) / blendMode(BLEND): Changes how shapes blend with the background pixels. 'ADD' combines overlapping colors to create a luminous, glowing effect for the QTE success zone. Sourced from the p5.js official reference and suggested by AI.
   blendMode(ADD);
   fill(245, 250, 255, 190);
   noStroke();
@@ -407,7 +408,7 @@ function getGlassVisibleOffset() {
   if (glassVisibleOffset !== null) {
     return glassVisibleOffset;
   }
-// [Out of the course] loadPixels() and pixels[] array: Directly accesses the raw RGBA pixel data of an image. Used here with a mathematical algorithm to find the exact non-transparent boundaries of the glass.png asset, fixing visual centering offsets caused by invisible padding. Suggested by AI.
+ // [Out of the course] loadPixels() and pixels[] array: Directly accesses the raw RGBA pixel data of an image. Used here with a mathematical algorithm to find the exact non-transparent boundaries of the glass.png asset, fixing visual centering offsets caused by invisible padding. Suggested by AI.
   glassImg.loadPixels();
 
   let minX = glassImg.width;
