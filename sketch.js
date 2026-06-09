@@ -1,4 +1,12 @@
-// Main p5 file: global canvas setup, start screen, background drawing, and shared visual helpers.
+// ============================================================================
+// AI Acknowledgement:
+// This file were developed with the assistance of Generative AI (Codex).
+// Specifically, the AI was used to help implement visual styling and typography techniques. 
+// This includes loading custom local font files (loadFont), applying additive blending for glowing effects (blendMode), configuring image transparency and alignment (tint/imageMode), and utilizing the HTML5 Canvas drawingContext to add drop shadows to text.
+// All generated logic has been reviewed by team.
+// ============================================================================
+
+// sketch: global canvas setup, start screen, background drawing, and shared visual helpers.
 
 // Core image assets used before the round begins.
 let bg;
@@ -22,6 +30,7 @@ function preload() {
   paperImg = loadImage("assets/paper.png");
   
   // Safely load the custom downloaded local fonts from the assets folder
+  // [Out of the course] loadFont(): Loads custom local font files (.ttf/.otf) from the assets folder into memory before the sketch starts. Sourced from the p5.js official reference and suggested by AI for better typography.
   customStoryFont = loadFont("assets/DancingScript-SemiBold.ttf");
   customButtonFont = loadFont("assets/Luminari-Regular.ttf");
 
@@ -136,6 +145,7 @@ function createFireflies() {
 }
 
 // Move the start-screen fireflies gently with noise so the title screen feels alive.
+// [Out of the course] blendMode(ADD) / blendMode(BLEND): Alters how overlapping shapes blend together. 'ADD' mode mathematically sums the pixel colors, creating a glowing, light-emitting effect for the start-screen fireflies. Sourced from the p5.js documentation.
 function updateAndDrawStartFireflies() {
   blendMode(ADD);
 
@@ -184,7 +194,7 @@ function drawOldPaperNotice() {
   let paperW = constrain(width * 0.82, 680, 1220);
   let paperRatio = paperImg ? paperImg.height / paperImg.width : 0.32;
   let paperH = paperW * paperRatio;
-
+  // [Out of the course] tint() and imageMode(): tint() applies an alpha transparency filter to the paper image, making it semi-transparent. imageMode(CENTER) sets the drawing anchor to the image's center instead of the top-left corner. Suggested by AI.
   if (paperImg) {
     tint(255, 178); // Set to 70% opacity
     imageMode(CENTER);
@@ -206,11 +216,12 @@ function drawOldPaperNotice() {
   // Isolate state changes for the narrative story styling block
   push();
   // Apply HTML5 canvas drawing engine filters to create a smooth dark-grey dropshadow
+  // [Out of the course] drawingContext.shadowColor / shadowBlur / shadowOffset: Accesses the underlying HTML5 Canvas API directly to apply a drop shadow effect behind the text. Suggested by AI to improve text readability against the bright paper background.
   drawingContext.shadowColor = color(20, 20, 20, 180);
   drawingContext.shadowBlur = 5;
   drawingContext.shadowOffsetX = 2;
   drawingContext.shadowOffsetY = 2;
-
+  // [Out of the course] textFont(): Replaces the default system font with the custom fonts loaded earlier (or specific web-safe fallback fonts) to improve the visual design and hierarchy of the interface. Sourced from p5.js documentation.
   if (customStoryFont) {
     textFont(customStoryFont);
   } else {
@@ -243,12 +254,13 @@ function drawOldPaperNotice() {
   text("Moonbeams (Cool-colors Fireflies)", paperX + 170, textY + lineGap * 3.2); 
 
   // Isolate text layout states again for remaining footers
+  // [Out of the course] drawingContext.shadowColor / shadowBlur / shadowOffset: Accesses the underlying HTML5 Canvas API directly to apply a drop shadow effect behind the text. Suggested by AI to improve text readability against the bright paper background.
   push();
   drawingContext.shadowColor = color(20, 20, 20, 180);
   drawingContext.shadowBlur = 5;
   drawingContext.shadowOffsetX = 2;
   drawingContext.shadowOffsetY = 2;
-
+  // [Out of the course] textFont(): Replaces the default system font with the custom fonts loaded earlier (or specific web-safe fallback fonts) to improve the visual design and hierarchy of the interface. Sourced from p5.js documentation.
   if (customStoryFont) {
     textFont(customStoryFont);
   } else {
@@ -288,6 +300,7 @@ function drawStartButton() {
   textAlign(CENTER, CENTER);
   
   // Apply downloaded local Luminari font asset for the main button title header
+  // [Out of the course] textFont(): Replaces the default system font with the custom fonts loaded earlier (or specific web-safe fallback fonts) to improve the visual design and hierarchy of the interface. Sourced from p5.js documentation.
   if (customButtonFont) {
     textFont(customButtonFont);
   } else {
@@ -298,7 +311,7 @@ function drawStartButton() {
   fill(255, 225, 120);
   fitText("The Star Keeper", b.w * 0.86, 40, 23);
   text("The Star Keeper", b.x, b.y + floatY - b.h * 0.12);
-
+  // [Out of the course] textFont(): Replaces the default system font with the custom fonts loaded earlier (or specific web-safe fallback fonts) to improve the visual design and hierarchy of the interface. Sourced from p5.js documentation.
   textFont("Roboto, Arial, sans-serif");
   textStyle(NORMAL);
   textSize(constrain(b.h * 0.18, 15, 22));
