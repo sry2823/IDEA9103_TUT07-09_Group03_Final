@@ -1,3 +1,11 @@
+// ============================================================================
+// AI Acknowledgement:
+// This file were developed with the assistance of Generative AI (ChatGPT).
+// Specifically, the AI was used to help structur visual effects and advanced image processing techniques. 
+// This includes using blendMode() for additive glowing effects, directly accessing raw image pixel arrays (loadPixels) to calculate precise non-transparent bounding boxes, and utilizing tint() for dynamic transparency animations.
+// All generated logic has been reviewed by the author.
+// ============================================================================
+
 // Time-based events: global countdown, red firefly, frozen side, and disappearance effects.
 
 // Main round countdown values.
@@ -187,6 +195,7 @@ function drawRedFirefly() {
     moveRedFirefly();
   }
 
+  // [Out of the course] blendMode(ADD) / blendMode(BLEND): Changes how the canvas renders overlapping graphics. 'ADD' mode adds the pixel color values together, creating a bright, luminous glowing effect for the red firefly. Suggested by AI and sourced from the p5.js official reference.
   blendMode(ADD);
   drawRedFlashFirefly(redFirefly.x, redFirefly.y);
   blendMode(BLEND);
@@ -308,6 +317,7 @@ function getFrozenVisibleBounds() {
     return frozenVisibleBounds;
   }
 
+  // [Out of the course] loadPixels() and pixels[] array: Directly accesses the raw RGBA data of an image in memory. Used here to mathematically scan the image and find the exact coordinates of visible (non-transparent) pixels. Suggested by AI to fix inaccurate bounding boxes caused by transparent padding in the PNG file.
   frozenImg.loadPixels();
 
   let minX = frozenImg.width;
@@ -363,6 +373,7 @@ function drawFrozenSide() {
   if (frozenImg) {
     let bounds = getFrozenVisibleBounds();
 
+// [Out of the course] tint() and imageMode(): tint() applies a color or opacity filter (alpha channel) to the image being drawn, creating a semi-transparent frozen overlay. imageMode(CORNER) sets the anchor point for positioning. Suggested by AI for visual styling.
     push();
     imageMode(CORNER);
     tint(255, 102);
@@ -486,6 +497,7 @@ function drawDisappearEffects() {
         let alpha = map(pulse, 0, 1, 90, 255);
         let baseSize = 92 + pulse * 62;
 
+// [Out of the course] tint() and imageMode(): Used here to dynamically adjust the transparency of the star image based on a calculated mathematical pulse (sine wave), creating a smooth fading animation. Suggested by AI and sourced from p5.js documentation.
         tint(255, alpha);
         imageMode(CENTER);
         image(starImg, effect.x, effect.y, baseSize, baseSize);
