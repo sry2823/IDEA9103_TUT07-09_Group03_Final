@@ -172,7 +172,7 @@ We referred to the following authoritative sources for theoretical inspiration, 
 
 ### 2. Acoustic Analysis & Inclusivity Reference
 * **Story, B. H., & Bunton, K. (2018). Formant frequencies of vowels in continuous speech as indicators of speaker identity and vowel category. *Journal of Speech, Language, and Hearing Research*, 61(11), 2689-2703.**
-  * *Influence:* Provided modern empirical data confirming that relative vocal tract resonances (Formants $1 and $2) remain highly reliable benchmarks for categorization across structurally diverse speakers, regardless of their individual biological pitch variations ($F_0$). This research directly validated our team's decision to implement a phoneme-based trigger, eliminating vocal profile biases to deliver a highly inclusive interactive user interface.
+  * *Influence:* Provided modern empirical data confirming that relative vocal tract resonances remain highly reliable benchmarks for categorization across structurally diverse speakers, regardless of their individual biological pitch variations. This research directly validated our team's decision to implement a phoneme-based trigger, eliminating vocal profile biases to deliver a highly inclusive interactive user interface.
 
 ---
 
