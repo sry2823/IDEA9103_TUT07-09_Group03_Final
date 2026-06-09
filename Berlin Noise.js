@@ -1,3 +1,10 @@
+// ============================================================================
+// AI Acknowledgement:
+// This file were developed with the assistance of Generative AI (ChatGPT).
+// Specifically, the AI was used to help structure visual rendering and mathematical physics calculations. 
+// This includes using blendMode() to create additive glowing effects for the fireflies, utilizing the exponentiation operator (**) to calculate physical velocity vectors, and managing web-safe typography rendering via textFont().
+// All generated logic has been reviewed by the author.
+// ============================================================================
 // Game scene: round setup, random firefly generation, Berlin-noise movement, and top UI.
 
 let gameState = "start";
@@ -155,6 +162,7 @@ function getNearestSpecialDistance(x, y) {
   return d;
 }
 
+// [Out of the course] blendMode(ADD) / blendMode(BLEND): Modifies how the colors of shapes interact with the pixels beneath them. 'ADD' mode mathematically sums the RGB values, creating a bright, glowing, light-emitting effect essential for the fireflies. Sourced from the p5.js official reference and suggested by AI.
 function updateAndDrawGameFireflies() {
   blendMode(ADD);
   for (let i = 0; i < gameFireflies.length; i++) {
@@ -185,6 +193,8 @@ function moveFireflyWithNoise(f) {
   addSeparationForce(f);
   addSpecialRepelForce(f);
   addEdgeForce(f);
+  
+  // [Out of the course] Exponentiation Operator (**): The double asterisk is a modern JavaScript mathematical operator used to calculate powers (in this case, squaring the horizontal and vertical velocities). It is used here as part of the Pythagorean theorem to calculate the firefly's total movement speed. Suggested by AI for concise math logic.
   let speed = sqrt(f.vx**2 + f.vy**2);
   let maxS = max(2.5, f.flightSpeed * 1.8);
   if (speed > maxS) { f.vx = (f.vx / speed) * maxS; f.vy = (f.vy / speed) * maxS; }
@@ -265,6 +275,8 @@ function drawRestartIcon(cx, cy, s) {
   noStroke(); fill(230, 246, 255, 220); triangle(cx + s * 0.44, cy - s * 0.1, cx + s * 0.55, cy - s * 0.42, cx + s * 0.2, cy - s * 0.34);
 }
 
+
+// [Out of the course] textFont(): Replaces the default canvas font with specific web-safe fonts (like Luminari or Roboto). This is used to enhance the UI's visual hierarchy and aesthetic quality. Sourced from the p5.js documentation.
 function drawTimeLabel() {
   textFont("Roboto, Arial, sans-serif"); 
   textStyle(BOLD); 
