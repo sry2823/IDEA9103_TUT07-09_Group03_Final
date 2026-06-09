@@ -119,9 +119,9 @@ function areTimedEventsPaused() {
   return activeCapture !== null || ecgEventActive;
 }
 
-// Spawn a red firefly every 15 seconds when allowed.
+// Spawn a red firefly every 15 seconds when when no other special object is active.
 function updateRedTimer(dt) {
-  if (redFirefly !== null || freezeSide !== null) {
+  if (redFirefly !== null || freezeSide !== null || silverNote !== null) {
     return;
   }
 
