@@ -1,3 +1,10 @@
+// ============================================================================
+// AI Acknowledgement:
+// This file were developed with the assistance of Generative AI (ChatGPT).
+// Specifically, the AI was used to help structure UI rendering techniques and advanced image processing. 
+// This includes using the pixels[] array via loadPixels() to calculate precise visual centering offsets for images with transparent padding, utilizing blendMode() for glowing QTE UI elements, and managing custom cursor states.
+// All generated logic has been reviewed by the author.
+// ============================================================================
 // User input: mouse clicks, QTE capture bar, custom cursor, and end screens.
 
 // Active QTE state. Null means the player is not currently catching anything.
@@ -258,7 +265,7 @@ function drawCaptureQTE() {
 
   let safeX = barX - barW / 2 + activeCapture.safeStart * barW;
   let safeW = activeCapture.safeW * barW;
-
+// [Out of the course] blendMode(ADD) / blendMode(BLEND): Changes how shapes blend with the background pixels. 'ADD' combines overlapping colors to create a luminous, glowing effect for the QTE success zone. Sourced from the p5.js official reference and suggested by AI.
   blendMode(ADD);
   fill(245, 250, 255, 190);
   noStroke();
@@ -364,6 +371,7 @@ function drawWinScreen() {
   // Layer 1: draw the nebula first at 100% opacity, underneath the glass.
   if (nebulaImg) {
     push();
+   // [Out of the course] imageMode(): Modifies the coordinate system for drawing images. Using CENTER draws the image from its center point rather than the top-left corner, ensuring perfect alignment for layered assets like the glass and nebula. Suggested by AI.
     imageMode(CENTER);
     noTint();
     translate(bottleCenterX, bottleCenterY);
@@ -375,6 +383,7 @@ function drawWinScreen() {
   // Layer 2: draw glass last at 100% opacity so it sits above the nebula.
   if (glassImg) {
     push();
+   // [Out of the course] imageMode(): Modifies the coordinate system for drawing images. Using CENTER draws the image from its center point rather than the top-left corner, ensuring perfect alignment for layered assets like the glass and nebula. Suggested by AI.
     imageMode(CENTER);
     noTint();
     image(glassImg, glassDrawX, glassDrawY, glassW, glassH);
@@ -398,7 +407,7 @@ function getGlassVisibleOffset() {
   if (glassVisibleOffset !== null) {
     return glassVisibleOffset;
   }
-
+// [Out of the course] loadPixels() and pixels[] array: Directly accesses the raw RGBA pixel data of an image. Used here with a mathematical algorithm to find the exact non-transparent boundaries of the glass.png asset, fixing visual centering offsets caused by invisible padding. Suggested by AI.
   glassImg.loadPixels();
 
   let minX = glassImg.width;
@@ -447,6 +456,7 @@ function drawLoseScreen() {
 // Draw the result message with downscaled text size to guarantee zero overlap errors.
 function drawEndTitle(title, posY) {
   textAlign(CENTER, CENTER);
+  // [Out of the course] textFont(): Overrides the default system font with specific web-safe fonts (like Luminari or Roboto) to improve the typographic aesthetics and visual hierarchy of the UI. Sourced from p5.js documentation.
   textFont("Luminari, Georgia, serif");
   textStyle(BOLD);
   textSize(constrain(width * 0.028, 22, 44)); 
@@ -470,6 +480,7 @@ function drawEndButton(label, posY) {
   rect(endButtonBounds.x, endButtonBounds.y, endButtonBounds.w, endButtonBounds.h, 16);
 
   noStroke();
+  // [Out of the course] textFont(): Overrides the default system font with specific web-safe fonts (like Luminari or Roboto) to improve the typographic aesthetics and visual hierarchy of the UI. Sourced from p5.js documentation.
   textAlign(CENTER, CENTER);
   textFont("Roboto, Arial, sans-serif");
   textStyle(BOLD);
@@ -479,6 +490,9 @@ function drawEndButton(label, posY) {
 }
 
 // Replace the system cursor with the net.png asset, except when hovering over specific buttons.
+// [Out of the course] cursor(ARROW) / noCursor(): Hides the default operating system mouse pointer 
+// (noCursor) so a custom asset (net.png) can be drawn at the mouse coordinates, and restores the default pointer (cursor) when hovering over clickable UI buttons.
+//  Sourced from p5.js documentation.
 function drawCustomCursor() {
   if ((gameState === "win" || gameState === "lose") && isMouseInside(endButtonBounds)) {
     cursor(ARROW);
@@ -493,6 +507,7 @@ function drawCustomCursor() {
   noCursor();
 
   if (netImg) {
+    // [Out of the course] imageMode(): Modifies the coordinate system for drawing images. Using CENTER draws the image from its center point rather than the top-left corner, ensuring perfect alignment for layered assets like the glass and nebula. Suggested by AI.
     imageMode(CENTER);
     image(netImg, mouseX + 12, mouseY + 12, 54, 54);
     imageMode(CORNER);
